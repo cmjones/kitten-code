@@ -1,0 +1,3 @@
+# Ignore eclipse metadata files
+.project
+.classpath
