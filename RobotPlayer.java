@@ -17,7 +17,7 @@ public class RobotPlayer {
         if(rc.getType() == RobotType.HQ)
             return new HQAI();
         else if(rc.getType() == RobotType.SOLDIER)
-            return new SoldierAI();
+            return new SoldierAI(rc);
 
         return null;
     }
