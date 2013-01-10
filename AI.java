@@ -11,15 +11,15 @@ import team197.modules.RadioModule;
  *  robot to suicide.
  */
 public abstract class AI {
-	protected RadioModule radio;
-	
-	public AI() {
-		radio = new RadioModule();
-	}
-	
-	public void do_checkin(RobotController rc){
-		radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
-	}
-	
+    protected RadioModule radio;
+
+    public AI() {
+            radio = new RadioModule();
+    }
+
+    public void do_checkin(RobotController rc){
+            radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
+    }
+
     abstract public AI act(RobotController rc) throws Exception;
 }
