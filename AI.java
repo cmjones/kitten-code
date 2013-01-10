@@ -1,7 +1,7 @@
 package team197;
 
 import battlecode.common.RobotController;
-
+import team197.modules.RadioModule;
 
 /**
  * Abstract base class for a robot AI.  Each AI has an act
@@ -11,5 +11,15 @@ import battlecode.common.RobotController;
  *  robot to suicide.
  */
 public abstract class AI {
+	protected RadioModule radio;
+	
+	public AI() {
+		radio = new RadioModule();
+	}
+	
+	public void do_checkin(RobotController rc){
+		radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
+	}
+	
     abstract public AI act(RobotController rc) throws Exception;
 }

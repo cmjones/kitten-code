@@ -43,6 +43,7 @@ public class RobotPlayer {
         // Start acting
         while (ai != null) {
             try {
+            	ai.do_checkin(rc);
                 ai = ai.act(rc);
                 rc.yield();
             } catch(Exception e) {
