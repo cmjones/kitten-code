@@ -44,9 +44,7 @@ public class RobotPlayer {
         // Start acting
         while (ai != null) {
             try {
-            	if(Clock.getRoundNum()%15 == 0){
-                ai.do_checkin(rc);
-            	}
+                ai.do_upkeep(rc);
                 ai = ai.act(rc);
                 rc.yield();
             } catch(Exception e) {
