@@ -16,7 +16,6 @@ public class SoldierAI extends AI {
     public SoldierAI(RobotController rc) {
         nav = new NavModule(rc);
         nav.setDestination(rc, rc.senseEnemyHQLocation());
-        rc.wearHat();
     }
 
     public AI act(RobotController rc) throws Exception {

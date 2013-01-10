@@ -14,10 +14,22 @@ public class RobotPlayer {
      * If not, decide on an ai based on simple statistics about the game.
      */
     public static AI chooseAI(RobotController rc) {
-        if(rc.getType() == RobotType.HQ)
+        switch(rc.getType()) {
+        case ARTILLERY:
+            return new ArtilleryAI();
+        case GENERATOR:
+            return new GeneratorAI();
+        case HQ:
             return new HQAI();
-        else if(rc.getType() == RobotType.SOLDIER)
+        case MEDBAY:
+            return new MedbayAI();
+        case SHIELDS:
+            return new ShieldsAI();
+        case SUPPLIER:
+            return new SupplierAI();
+        case SOLDIER:
             return new SoldierAI(rc);
+        }
 
         return null;
     }
