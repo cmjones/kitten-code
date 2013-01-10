@@ -10,24 +10,43 @@ import team197.modules.NavModule;
 /** Example Soldier ai, obtained from the example code.
  * moves randomly and lays mines down
  */
-public class MinesweeperAI extends AI {
+public class MinesweeperAI extends SoldierAI {
     private NavModule nav;
-    /*
-    Direction diradvance;
-    Direction dirleft;
-    Direction dirright;
-    Direction dirmove;*/
     Direction d;
+	MapLocation gotoloc;
     int type;
     public MinesweeperAI(RobotController rc, int type_get) {
-        nav = new NavModule(rc);
-        nav.setDestination(rc, rc.senseEnemyHQLocation());
-        d = nav.moveSimple(rc);
-        nav.setDestination(rc, rc.getLocation().add(d,2));
+    	super(rc);
+        
+    	switch(type_get){
+    	case AI.JOB_MINESWEEPER_L:
+    		gotoloc = rc.getLocation().add(Direction.WEST,2).add(Direction.NORTH);
+    		break;
+    	case AI.JOB_MINESWEEPER_M:
+    		gotoloc = rc.getLocation();
+    		break;
+    	case AI.JOB_MINESWEEPER_R:
+    		gotoloc = rc.getLocation().add(Direction.EAST,2).add(Direction.NORTH);
+    		break;
+    	}
+    	nav.setDestination(rc, gotoloc);
+    	d = nav.moveSimple(rc);
     }
     
-    public MinesweeperAI(RobotController rc, MapLocation gotoloc, int type_get){
-    	nav = new NavModule(rc);
+    public MinesweeperAI(RobotController rc, SoldierAI oldme, int type_get){
+    	super(rc, oldme);
+
+    	switch(type_get){
+    	case AI.JOB_MINESWEEPER_L:
+    		gotoloc = rc.getLocation().add(Direction.WEST,2).add(Direction.NORTH);
+    		break;
+    	case AI.JOB_MINESWEEPER_M:
+    		gotoloc = rc.getLocation();
+    		break;
+    	case AI.JOB_MINESWEEPER_R:
+    		gotoloc = rc.getLocation().add(Direction.EAST,2).add(Direction.NORTH);
+    		break;
+    	}
     	nav.setDestination(rc, gotoloc);
     	d = nav.moveSimple(rc);
     }
