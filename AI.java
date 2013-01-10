@@ -14,7 +14,14 @@ public abstract class AI {
     public static final int JOB_STANDARD = 1,
                             JOB_MINESWEEPER_L = 2,
                             JOB_MINESWEEPER_M = 3,
-                            JOB_MINESWEEPER_R = 4;
+                            JOB_MINESWEEPER_R = 4,
+                            JOB_BUILDER = 5;
+    
+    public static final int TOBUILD_GENERATOR = 1,
+    		                TOBUILD_ARTILLERY = 2,
+    		                TOBUILD_MEDBAY = 3,
+    		                TOBUILD_SHIELDS = 4,
+    		                TOBUILD_SUPPLIER = 5;
 	
     protected RadioModule radio;
 

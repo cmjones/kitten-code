@@ -35,10 +35,16 @@ public class MinerHQAI extends AI {
 	                    	if (rc.canMove(dir))
 	                    		rc.spawn(dir);
 	            		}
-	            		else if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 10){
+	            		else if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 3){
 	            			radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_STANDARD);
 	                    	if (rc.canMove(dir))
 	                    		rc.spawn(dir);
+	            		}
+	            		else if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) == 4){
+	            			radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_BUILDER);
+	            			radio.write(rc, RadioModule.CHANNEL_BUILDER_DESTI, rc.senseAllEncampmentSquares()[0].x * 10000 + rc.senseAllEncampmentSquares()[0].y * 100 + TOBUILD_GENERATOR);
+	            			if(rc.canMove(dir))
+	            				rc.spawn(dir);
 	            		}
 	            		else{
 	            			rc.researchUpgrade(Upgrade.NUKE);

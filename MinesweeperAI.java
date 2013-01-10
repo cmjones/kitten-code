@@ -5,38 +5,22 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 
 import team197.modules.NavModule;
+import team197.modules.FightModule;
 
 
 /** Example Soldier ai, obtained from the example code.
  * moves randomly and lays mines down
  */
 public class MinesweeperAI extends SoldierAI {
-    private NavModule nav;
     Direction d;
 	MapLocation gotoloc;
     int type;
-    public MinesweeperAI(RobotController rc, int type_get) {
-    	super(rc);
-        
-    	switch(type_get){
-    	case AI.JOB_MINESWEEPER_L:
-    		gotoloc = rc.getLocation().add(Direction.WEST,2).add(Direction.NORTH);
-    		break;
-    	case AI.JOB_MINESWEEPER_M:
-    		gotoloc = rc.getLocation();
-    		break;
-    	case AI.JOB_MINESWEEPER_R:
-    		gotoloc = rc.getLocation().add(Direction.EAST,2).add(Direction.NORTH);
-    		break;
-    	}
-    	nav.setDestination(rc, gotoloc);
-    	d = nav.moveSimple(rc);
-    }
     
     public MinesweeperAI(RobotController rc, SoldierAI oldme, int type_get){
     	super(rc, oldme);
-
-    	switch(type_get){
+    	type = type_get;
+    	gotoloc = rc.getLocation();
+    	switch(type){
     	case AI.JOB_MINESWEEPER_L:
     		gotoloc = rc.getLocation().add(Direction.WEST,2).add(Direction.NORTH);
     		break;

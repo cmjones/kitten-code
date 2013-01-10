@@ -36,6 +36,8 @@ public class SoldierAI extends AI {
         	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_M);
         } else if(jobget == AI.JOB_MINESWEEPER_R){
         	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_R);
+        } else if(jobget == AI.JOB_BUILDER){
+        	return new BuilderAI(rc, this);
         } else {
         	return new FighterAI(rc, this);
         }
