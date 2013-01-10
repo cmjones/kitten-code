@@ -1,7 +1,9 @@
 package team197.modules;
 
 import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
+import battlecode.common.Robot;
 import battlecode.common.RobotController;
 
 import java.util.ArrayList;
@@ -45,13 +47,14 @@ public class FightModule {
             if(values[i] == Direction.OMNI) continue;
 
             // Test if the new direction can be moved to
-            if(!rc.canMove(values[i])) continue;
+            if(values[i] != Direction.NONE && !rc.canMove(values[i])) continue;
 
             // Test if the new location is adjacent to
             // any of the targets
             MapLocation m = cur.add(values[i]);
-            for(int j = 0; j < targets.length; j++)
-                if(m.isAdjacentTo(targets[j]) break;
+            int j;
+            for(j = 0; j < targets.length; j++)
+                if(m.isAdjacentTo(targets[j])) break;
             if(j == targets.length) continue;
 
             // This is a valid direction
@@ -59,7 +62,7 @@ public class FightModule {
         }
 
         // Finally, return the array
-        return dirs.toArray();
+        return dirs.toArray(new Direction[0]);
     }
 
     /** Finds an optimum direction to move for fighting.
@@ -76,29 +79,14 @@ public class FightModule {
         int besti;
         double bestval, val;
 
-        // Create an array of directions to test
-        if(target.isDiagonal()) {
-            dirs = new Direction[3];
-            dirs[0] = Direction.NONE;
-            dirs[1] = target.rotateRight();
-            dirs[2] = target.rotateLeft();
-        } else {
-            dirs = new Direction[5];
-            dirs[0] = Direction.NONE;
-            dirs[1] = target.rotateRight();
-            dirs[2] = target.rotateLeft();
-            dirs[3] = dirs[1].rotateRight();
-            dirs[4] = dirs[2].rotateLeft();
-        }
-
-        // Now loop through each direction and compute a score based
+        // Loop through each direction and compute a score based
         // on the following:
         //  - Subtract STRAFE_ADJ_COST for each adjacent enemy
         //  - Add 36/(distance squared) for each nearby enemy
         //  - Add 36/(distance squared) to nearby allies
         // The lowest total score is the best location.
         besti = 0;
-        bestval 10000;
+        bestval = 10000;
         for(int i = 0; i < dirs.length; i++) {
             val = 0;
             tmp = cur.add(dirs[i]);
@@ -119,7 +107,7 @@ public class FightModule {
             // If this score is better than the old best, record
             //  the score and the index.
             if(val < bestval) {
-                besti = j;
+                besti = i;
                 bestval = val;
             }
         }
@@ -134,7 +122,7 @@ public class FightModule {
      *  robot can move adjacent to one or more enemies, it chooses to
      *  move next to fewer enemies.
      */
-    public Direction fightClosestRobot(RobotController rc) {
+    public Direction fightClosestRobot(RobotController rc) throws GameActionException {
         MapLocation[] enemies,
                       allies;
         Direction[] dirs;
@@ -147,7 +135,7 @@ public class FightModule {
         robots = rc.senseNearbyGameObjects(Robot.class, 33, rc.getRobot().getTeam().opponent());
 
         // If there are no enemies, there is nothing to fight
-        if(robots.length = 0) return null;
+        if(robots.length == 0) return null;
 
         // Record enemy locations
         enemies = new MapLocation[robots.length];

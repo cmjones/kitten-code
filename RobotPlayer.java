@@ -28,7 +28,7 @@ public class RobotPlayer {
         case SUPPLIER:
             return new SupplierAI();
         case SOLDIER:
-            return new SoldierAI(rc);
+            return new FighterAI(rc);
         }
 
         return null;
