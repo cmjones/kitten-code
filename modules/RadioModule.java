@@ -29,7 +29,7 @@ public class RadioModule {
                             CHANNEL_FREE10 = 9,
                             CHANNEL_FREE11 = 10,
                             CHANNEL_FREE12 = 11,
-                            CHANNEL_FREE13 = 12;
+                            CHANNEL_CHECKIN = 12;
     private static final int KEY = 0xCA000000,
                              CHANNEL_OFFSET = 197,
                              TURN_SHIFT = 24,
@@ -49,13 +49,13 @@ public class RadioModule {
     private void checkTurn() {
         int round = Clock.getRoundNum();
         if(curTurn == round) return;
-
         // Recalculate things
         curTurn = round;
         curReadBase = (round-1)*INC+CHANNEL_OFFSET;
         curWriteBase = curReadBase+INC;
         prevSignature = ((round-1) << TURN_SHIFT)^KEY;
         curSignature = (round << TURN_SHIFT)^KEY;
+        ////System.out.println(Integer.toHexString(prevSignature) + " " + Integer.toHexString(curSignature));
     }
 
     /** Writes a message securely to the given channel.
@@ -129,7 +129,7 @@ public class RadioModule {
 
         // Now read a message from the channel
         try {
-            msg = rc.readBroadcast((curReadBase+channelNum)%GameConstants.BROADCAST_MAX_CHANNELS);
+            msg = rc.readBroadcast((curWriteBase+channelNum)%GameConstants.BROADCAST_MAX_CHANNELS);
         } catch(GameActionException e) {
             // Failure means no message was read.
             msg = 0;
@@ -137,7 +137,7 @@ public class RadioModule {
 
         // Grab the message portion of the channel
         retval = msg&SIG_MASK_INV;
-
+        ////System.out.println(Integer.toHexString(msg));
         // Now check the signature
         if((msg&SIG_MASK) == curSignature)
             return retval;
