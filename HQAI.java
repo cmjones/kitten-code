@@ -4,6 +4,7 @@ import battlecode.common.Direction;
 import battlecode.common.RobotController;
 import team197.modules.RadioModule;
 import battlecode.common.Upgrade;
+import battlecode.common.Clock;
 
 
 /** Example HQ ai, obtained from the example code.
@@ -14,9 +15,11 @@ public class HQAI extends AI {
         if (rc.isActive()) {
             // Spawn a soldier
             Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+            if(Clock.getRoundNum()%15 == 1){
             if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 10){
             	if (rc.canMove(dir))
             		rc.spawn(dir);
+            }
             }
             else {
             	if(rc.hasUpgrade(Upgrade.PICKAXE) != true){
