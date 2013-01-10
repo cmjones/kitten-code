@@ -11,6 +11,11 @@ import team197.modules.RadioModule;
  *  robot to suicide.
  */
 public abstract class AI {
+    public static final int JOB_STANDARD = 1,
+                            JOB_MINESWEEPER_L = 2,
+                            JOB_MINESWEEPER_M = 3,
+                            JOB_MINESWEEPER_R = 4;
+	
     protected RadioModule radio;
 
     public AI() {

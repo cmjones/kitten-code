@@ -24,8 +24,8 @@ import battlecode.common.RobotController;
  */
 public class NavModule {
     private MapLocation dest;
-    private int mapWidth,
-                mapHeight;
+    public int mapWidth,
+               mapHeight;
 
 
     public NavModule(RobotController rc) {

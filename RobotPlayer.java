@@ -2,6 +2,7 @@ package team197;
 
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
+import battlecode.common.Clock;
 
 /** Top-level entry into the robot AI.
  * Robots generally act with a specific behavior when created, and this behavior
@@ -20,7 +21,7 @@ public class RobotPlayer {
         case GENERATOR:
             return new GeneratorAI();
         case HQ:
-            return new HQAI();
+            return new MinerHQAI();
         case MEDBAY:
             return new MedbayAI();
         case SHIELDS:
@@ -28,7 +29,7 @@ public class RobotPlayer {
         case SUPPLIER:
             return new SupplierAI();
         case SOLDIER:
-            return new FighterAI(rc);
+            return new SoldierAI(rc);
         }
 
         return null;
@@ -43,7 +44,9 @@ public class RobotPlayer {
         // Start acting
         while (ai != null) {
             try {
-            	ai.do_checkin(rc);
+            	if(Clock.getRoundNum()%15 == 0){
+                ai.do_checkin(rc);
+            	}
                 ai = ai.act(rc);
                 rc.yield();
             } catch(Exception e) {

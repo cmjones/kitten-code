@@ -18,6 +18,11 @@ public class FighterAI extends SoldierAI {
         nav.setDestination(rc, rc.senseEnemyHQLocation());
     }
 
+    public FighterAI(RobotController rc, SoldierAI oldme){
+    	super(rc, oldme);
+        nav.setDestination(rc, rc.senseEnemyHQLocation());
+    }
+    
     public AI act(RobotController rc) throws Exception {
         Direction d;
         MapLocation target;
@@ -33,7 +38,7 @@ public class FighterAI extends SoldierAI {
         if(d != Direction.NONE && d != Direction.OMNI) {
             // If there's a mine, defuse it
             target = rc.getLocation().add(d);
-            if(rc.senseMine(target) != null)
+            if(rc.senseMine(target) != null && rc.senseMine(target) != rc.getTeam())
                 rc.defuseMine(target);
             else
                 rc.move(d);

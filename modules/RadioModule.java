@@ -28,7 +28,7 @@ public class RadioModule {
                             CHANNEL_FREE09 = 8,
                             CHANNEL_FREE10 = 9,
                             CHANNEL_FREE11 = 10,
-                            CHANNEL_FREE12 = 11,
+                            CHANNEL_GETJOB = 11,
                             CHANNEL_CHECKIN = 12;
     private static final int KEY = 0xCA000000,
                              CHANNEL_OFFSET = 197,
@@ -137,7 +137,7 @@ public class RadioModule {
 
         // Grab the message portion of the channel
         retval = msg&SIG_MASK_INV;
-        ////System.out.println(Integer.toHexString(msg));
+
         // Now check the signature
         if((msg&SIG_MASK) == curSignature)
             return retval;
