@@ -158,8 +158,12 @@ public class FightModule {
                 }
             }
 
-            // Return the direction to the closest enemy
-            return cur.directionTo(enemies[mini]);
+            // Return the direction to the closest enemy if you can move
+            // there.  If you can't, then this robot cannot move.
+            Direction d = cur.directionTo(enemies[mini]);
+            if(rc.canMove(d))
+                return d;
+            return Direction.NONE;
         } else if(dirs.length == 1) {
             // Only one direction to move, ATTACK!
             return dirs[0];

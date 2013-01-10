@@ -14,15 +14,16 @@ public class HQAI extends AI {
         if (rc.isActive()) {
             // Spawn a soldier
             Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
-            if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 30){
+            if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 4) {
+            	if (rc.canMove(dir))
+            		rc.spawn(dir);
+            } else if(rc.hasUpgrade(Upgrade.DEFUSION) != true) {
+                rc.researchUpgrade(Upgrade.DEFUSION);
+            } else if(radio.read(rc, RadioModule.CHANNEL_CHECKIN) < 30){
             	if (rc.canMove(dir))
             		rc.spawn(dir);
             } else {
-            	if(rc.hasUpgrade(Upgrade.PICKAXE) != true){
-            		rc.researchUpgrade(Upgrade.PICKAXE);
-            	} else {
-            		rc.researchUpgrade(Upgrade.NUKE);
-            	}
+                rc.researchUpgrade(Upgrade.NUKE);
             }
         }
 
