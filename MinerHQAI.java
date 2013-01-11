@@ -13,35 +13,17 @@ import team197.modules.RadioModule;
  *  Just spawns new soldiers.
  */
 public class MinerHQAI extends HQAI {
-	int[][] internalmap;
-	int mapwidth;
-	int mapheight;
+
 	
-    public MinerHQAI() {
-        super();
+    public MinerHQAI(RobotController rc) {
+        super(rc);
     }
 
-    public MinerHQAI(HQAI oldme) {
-        super(oldme);
+    public MinerHQAI(RobotController rc, HQAI oldme) {
+        super(rc, oldme);
     }
 
     public AI act(RobotController rc) throws Exception {
-    	if(internalmap == null){
-	        mapwidth = rc.getMapWidth();
-	        mapheight = rc.getMapHeight();
-	        internalmap = new int [mapwidth][mapheight];
-	        MapLocation[] badmineslocs = rc.senseNonAlliedMineLocations(new MapLocation(0,0),mapheight * mapheight + mapwidth * mapwidth);
-	        for(int i = 0; i < badmineslocs.length; i++){
-	        	internalmap[badmineslocs[i].x][badmineslocs[i].y] = 1;
-	        }
-	        
-	        rc.yield();
-	        
-	        MapLocation[] encamps = rc.senseAllEncampmentSquares();
-	        for(int i = 0; i < encamps.length; i ++){
-	        	internalmap[encamps[i].x][badmineslocs[i].y] = 2;
-	        }
-    	}
     	
         if (rc.isActive()) {
             Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
@@ -51,33 +33,23 @@ public class MinerHQAI extends HQAI {
             } else {
                 if(Clock.getRoundNum()%15 == 1){
                     if(robotCount == 1){
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_MINESWEEPER_L);
-                        if (rc.canMove(dir))
-                                rc.spawn(dir);
+                        makeRobot(rc, 0, AI.JOB_MINESWEEPER_L);
                     } else if(robotCount == 2){
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_MINESWEEPER_M);
-                        if (rc.canMove(dir))
-                                rc.spawn(dir);
+                    	makeRobot(rc, 0, AI.JOB_MINESWEEPER_M);
                     } else if(robotCount == 3){
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_MINESWEEPER_R);
-                        if (rc.canMove(dir))
-                                rc.spawn(dir);
+                    	makeRobot(rc, 0, AI.JOB_MINESWEEPER_R);
                     } else if(robotCount < 1){
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_STANDARD);
-                        if (rc.canMove(dir))
-                                rc.spawn(dir);
+                    	makeRobot(rc, 0, AI.JOB_STANDARD);
                     } else if(robotCount == 4){
                     	int msgbuf;
                     	int x = rc.senseAllEncampmentSquares()[0].x;
                     	int y = rc.senseAllEncampmentSquares()[0].y;
                     	
-                    	msgbuf = x << 17;
-                    	msgbuf += y << 10;
-                    	msgbuf += AI.TOBUILD_GENERATOR << 4;
-                    	msgbuf += AI.JOB_BUILDER;
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
-                        if(rc.canMove(dir))
-                                rc.spawn(dir);
+                    	msgbuf = x << 13;
+                    	msgbuf += y << 6;
+                    	msgbuf += AI.TOBUILD_GENERATOR;
+                    	
+                    	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
                     } else{
                         rc.researchUpgrade(Upgrade.NUKE);
                     }
