@@ -21,7 +21,7 @@ public class SoldierAI extends AI {
         nav = new NavModule(rc);
         fight = new FightModule();
     }
-    
+
     public SoldierAI(RobotController rc, SoldierAI oldme){
     	nav = oldme.nav;
     	fight = oldme.fight;

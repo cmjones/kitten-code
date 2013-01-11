@@ -27,6 +27,7 @@ public class HQAI extends AI {
     }
 
     public AI act(RobotController rc) throws Exception {
+        rc.senseNonAlliedMineLocations(rc.getLocation(), 64);
         return new MinerHQAI(this);
     }
 }

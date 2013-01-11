@@ -22,7 +22,7 @@ public class FighterAI extends SoldierAI {
     	super(rc, oldme);
         nav.setDestination(rc, rc.senseEnemyHQLocation());
     }
-    
+
     public AI act(RobotController rc) throws Exception {
         Direction d;
         MapLocation target;
@@ -33,7 +33,7 @@ public class FighterAI extends SoldierAI {
         // If there are enemies to fight, fight! Otherwise,
         // continue towards the enemy base
         if((d = fight.fightClosestRobot(rc)) == null)
-            d = nav.moveSimple(rc);
+            d = nav.moveFlock(rc);
 
         if(d != Direction.NONE && d != Direction.OMNI) {
             // If there's a mine, defuse it
