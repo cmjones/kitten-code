@@ -15,12 +15,13 @@ public class BuilderAI extends SoldierAI {
 	int ydesti;
 	int buildingtype;
 	MapLocation target;
-	public BuilderAI(RobotController rc, SoldierAI oldme){
+	public BuilderAI(RobotController rc, SoldierAI oldme, int navdata){
 		super(rc, oldme);
-		buildermessage = radio.readTransient(rc, RadioModule.CHANNEL_BUILDER_DESTI);
-        xdesti = (int) Math.floor(buildermessage/10000);
-		ydesti = (int) Math.floor(buildermessage/100) - xdesti*100;
-		buildingtype = buildermessage - xdesti * 10000 - ydesti * 100;
+		System.out.println(navdata);
+		buildermessage = navdata;
+		xdesti = buildermessage >>> 13;
+		ydesti = (buildermessage >>> 6)&0x7F;
+		buildingtype = buildermessage&0x3F;
 		target = new MapLocation(xdesti, ydesti);
 		nav.setDestination(rc,target);
 	}

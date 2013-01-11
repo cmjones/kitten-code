@@ -4,6 +4,7 @@ import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.RobotController;
 import battlecode.common.Upgrade;
+import battlecode.common.MapLocation;
 
 import team197.modules.RadioModule;
 
@@ -12,6 +13,10 @@ import team197.modules.RadioModule;
  *  Just spawns new soldiers.
  */
 public class MinerHQAI extends HQAI {
+	int[][] internalmap;
+	int mapwidth;
+	int mapheight;
+	
     public MinerHQAI() {
         super();
     }
@@ -21,6 +26,23 @@ public class MinerHQAI extends HQAI {
     }
 
     public AI act(RobotController rc) throws Exception {
+    	if(internalmap == null){
+	        mapwidth = rc.getMapWidth();
+	        mapheight = rc.getMapHeight();
+	        internalmap = new int [mapwidth][mapheight];
+	        MapLocation[] badmineslocs = rc.senseNonAlliedMineLocations(new MapLocation(0,0),mapheight * mapheight + mapwidth * mapwidth);
+	        for(int i = 0; i < badmineslocs.length; i++){
+	        	internalmap[badmineslocs[i].x][badmineslocs[i].y] = 1;
+	        }
+	        
+	        rc.yield();
+	        
+	        MapLocation[] encamps = rc.senseAllEncampmentSquares();
+	        for(int i = 0; i < encamps.length; i ++){
+	        	internalmap[encamps[i].x][badmineslocs[i].y] = 2;
+	        }
+    	}
+    	
         if (rc.isActive()) {
             Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
             // First, work on the Pickaxe.
@@ -40,13 +62,20 @@ public class MinerHQAI extends HQAI {
                         radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_MINESWEEPER_R);
                         if (rc.canMove(dir))
                                 rc.spawn(dir);
-                    } else if(robotCount < 3){
+                    } else if(robotCount < 1){
                         radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_STANDARD);
                         if (rc.canMove(dir))
                                 rc.spawn(dir);
                     } else if(robotCount == 4){
-                        radio.write(rc, RadioModule.CHANNEL_GETJOB, AI.JOB_BUILDER);
-                        radio.write(rc, RadioModule.CHANNEL_BUILDER_DESTI, rc.senseAllEncampmentSquares()[0].x * 10000 + rc.senseAllEncampmentSquares()[0].y * 100 + TOBUILD_GENERATOR);
+                    	int msgbuf;
+                    	int x = rc.senseAllEncampmentSquares()[0].x;
+                    	int y = rc.senseAllEncampmentSquares()[0].y;
+                    	
+                    	msgbuf = x << 17;
+                    	msgbuf += y << 10;
+                    	msgbuf += AI.TOBUILD_GENERATOR << 4;
+                    	msgbuf += AI.JOB_BUILDER;
+                        radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
                         if(rc.canMove(dir))
                                 rc.spawn(dir);
                     } else{
@@ -55,7 +84,14 @@ public class MinerHQAI extends HQAI {
                 }
             }
         }
-
+        
+        //ROBOT BUILD MESSAGE SYSTEM
+        /*
+         * Builder Robot:
+        0000000 0000000 000000 0000
+        	x	   y	 type   Job 
+       |         data         | job |
+        */
         // Keep the same ai for next round
         return this;
     }

@@ -15,6 +15,7 @@ import team197.modules.FightModule;
 public class SoldierAI extends AI {
     protected NavModule nav;
     protected FightModule fight;
+    String maskbuffer;
 
     public SoldierAI(RobotController rc) {
         nav = new NavModule(rc);
@@ -29,7 +30,10 @@ public class SoldierAI extends AI {
     public AI act(RobotController rc) throws Exception {
         Direction d;
         MapLocation target;
-        int jobget = radio.readTransient(rc, RadioModule.CHANNEL_GETJOB);
+        int msgget = radio.readTransient(rc, RadioModule.CHANNEL_GETJOB);        
+        int jobget = msgget&0xF;
+        int dataget = msgget >>> 4;
+        
         if(jobget == AI.JOB_MINESWEEPER_L){
         	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_L);
         } else if(jobget == AI.JOB_MINESWEEPER_M){
@@ -37,7 +41,7 @@ public class SoldierAI extends AI {
         } else if(jobget == AI.JOB_MINESWEEPER_R){
         	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_R);
         } else if(jobget == AI.JOB_BUILDER){
-        	return new BuilderAI(rc, this);
+        	return new BuilderAI(rc, this, dataget);
         } else {
         	return new FighterAI(rc, this);
         }
