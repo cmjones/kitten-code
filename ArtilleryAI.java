@@ -7,6 +7,9 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.RobotController;
 
+import java.util.List;
+import java.util.LinkedList;
+
 
 /** Artillery AI that aims to do the most damage possible to enemies.
  * The artillery does a search in its attack radius for robots, then
@@ -16,8 +19,13 @@ import battlecode.common.RobotController;
  *  also prioritizes non-shielded enemies.
  */
 public class ArtilleryAI extends AI {
+    private static final MapLocation COMP = new MapLocation(0, 0);
+    private static final int KILL_BONUS = 40;
+    private static final double ALLY_MULT = -4,
+                                SHIELD_MULT = .1;
+
     private int r;
-    private double[][][] map;
+    private double[][] map;
     boolean clear;
 
 
@@ -31,120 +39,151 @@ public class ArtilleryAI extends AI {
         //  the amount of health the robot has at that location, and
         //  a multiplier for priority (negative for allies, small for
         //  shielded enemies)
-        map = new double[2*r+1][2*r+1][2];
+        map = new double[2*r+1][2*r+1];
+    }
+
+    public void clearMap() {
+        // Clear out the map
+        for(int i = 0; i < map.length; i++)
+            for(int j = 0; j < map[i].length; j++)
+                map[i][j] = 0;
+
+        // Put ourselves on the map
+        map[r][r] = -40;
+        for(int i = -1; i <= 1; i++)
+            for(int j = -1; j <= 1; j++)
+                if(i == 0 && j == 0)
+                    map[r+i][r+j] = -40;
+                else
+                    map[r+i][r+j] = -20;
+    }
+
+    /** Fills out values in the map using the given array of allies.
+     * Does not attempt to find the maximum.
+     */
+    public void fillMapAllies(RobotController rc, Robot[] robots) throws Exception {
+        RobotInfo info;
+        MapLocation tmp;
+        int x, y;
+        double direct, splash;
+
+        for(int i = 0; i < robots.length; i++) {
+            // Do some sensing on the robot, and calculate it's position
+            //  in the array.
+            info = rc.senseRobotInfo(robots[i]);
+            tmp = info.location.add(r-rc.getLocation().x, r-rc.getLocation().y);
+
+            // Calculate the damage for attacking this square
+            // If the robot is shielded, damage is less useful
+            // If the damage would kill the robot, there's a bonus
+            direct = RobotType.ARTILLERY.attackPower;
+            splash = direct*GameConstants.ARTILLERY_SPLASH_RATIO;
+            direct = (Math.max(direct-info.shields, 0) +
+                      Math.min(direct, info.shields)*SHIELD_MULT +
+                      ((direct > info.shields+info.energon)?KILL_BONUS:0))*ALLY_MULT;
+            splash = (Math.max(splash-info.shields, 0) +
+                      Math.min(splash, info.shields)*SHIELD_MULT +
+                      ((splash > info.shields+info.energon)?KILL_BONUS:0))*ALLY_MULT;
+
+            // Now add these damages to the array.  The current square
+            //  should get the direct bonus, while the surrounding squares
+            //  should get the splash bonus.
+            for(int j = 1; j <= 1; j++) {
+                x = tmp.x+j;
+                for(int k = -1; k <= 1; k++) {
+                    y = tmp.y+k;
+                    if(x >= 0 && x < map.length && y >= 0 && y < map[x].length) {
+                        if(j == 0 && k == 0)
+                            map[x][y] += direct;
+                        else
+                            map[x][y] += splash;
+                    }
+                }
+            }
+        }
     }
 
     public AI act(RobotController rc) throws Exception {
-        Robot[] robots;
+        Robot[] robots, allies;
         RobotInfo info;
-        MapLocation best, tmp;
-        int x, y;
-        double damage, maxval, val;
-        boolean fire;
+        MapLocation tmp;
+        int x, y, maxx, maxy;
+        double direct, splash, maxval;
 
         // If we aren't active, use this time to clear the map
         if(!rc.isActive()) {
             if(!clear) {
-                // Clear out the map
-                for(int i = 0; i <= 2*r; i++) {
-                    for(int j = 0; j <= 2*r; j++) {
-                        map[i][j][0] = 0;
-                        map[i][j][1] = 0;
-                    }
-                }
+                clearMap();
                 clear = true;
             }
 
             return this;
         }
 
+        // Grab a list of nearby enemies.  If there are none, don't
+        //  bother doing anything else.
+        robots = rc.senseNearbyGameObjects(Robot.class, r*r, rc.getTeam().opponent());
+        if(robots.length == 0)
+            return this;
+        else
+            clear = false;
 
-        // Now grab a list of nearby robots and store them in the map.
-        // Also check if there are any enemies in the first place.
-        fire = false;
-        robots = rc.senseNearbyGameObjects(Robot.class, r*r);
-        if(robots.length > 0) clear = false;
+        // Now grab a list of nearby allies and fill out the map with
+        //  them first.
+        allies = rc.senseNearbyGameObjects(Robot.class, r*r, rc.getTeam());
+        fillMapAllies(rc, allies);
 
-        for(int i = 0; i < robots.length; i++) {
-            // Grab the robot info
-            info = rc.senseRobotInfo(robots[i]);
-
-            // Calculate where in the array the info should be stored
-            x = info.location.x-rc.getLocation().x+r;
-            y = info.location.y-rc.getLocation().y+r;
-
-            // And store it
-            if(info.shields > info.energon)
-                map[x][y][0] = .25;
-            else
-                map[x][y][0] = 1;
-
-            if(info.team == rc.getTeam()) {
-                map[x][y][0] *= -4;
-            } else {
-                // Found an enemy
-                fire = true;
-
-                // Mark the surrounding squares with a non-zero
-                // health, so the next search doesn't bother with
-                // squares not next to an enemy.
-                for(int j = x-1; j <= x+1; j++)
-                    for(int k = y-1; k <= y+1; k++)
-                        if(j != x && k != y &&
-                           j >= 0 && j < 2*r && k >= 0 && k < 2*r &&
-                           map[j][k][1] == 0)
-                            map[j][k][1] = -1;
-            }
-
-            map[x][y][1] = info.shields+info.energon;
-        }
-
-        // If there are no enemies, don't bother firing.
-        if(!fire) return this;
-
-        // Finally, walk through the array and find a suitable target,
-        // using distance to break ties (prefer shooting closer).  We
-        // can skip trying to shoot at the boundaries of the map, since
-        // they shouldn't be within firing range anyway.  This allows
-        // us to avoid index-out-of-bounds issues as well.
-        best = null;
+        // Step through the list, computing the value of attacking each square
+        maxx = maxy = -1000;
         maxval = 0;
-        for(int i = 1; i <= 2*r-1; i++) {
-            for(int j = 1; j <= 2*r-1; j++) {
-                // Check that this shot would be in range and that this
-                //  square is next to an enemy.
-                if(map[i][j][1] == 0 ||
-                   (i-r)*(i-r)+(j-r)*(j-r) > RobotType.ARTILLERY.attackRadiusMaxSquared)
-                    continue;
+        for(int i = 0; i < robots.length; i++) {
+            // Do some sensing on the robot, and calculate it's position
+            //  in the array.
+            info = rc.senseRobotInfo(robots[i]);
+            tmp = info.location.add(r-rc.getLocation().x, r-rc.getLocation().y);
 
-                // Calculate the value of a shot at offset (i-r, j-r)
-                val = 0;
-                for(x = -1; x <= 1; x++) {
-                    for(y = -1; y <= 1; y++) {
-                        // Set the damage done to this location
-                        damage = RobotType.ARTILLERY.attackPower;
-                        if(x != 0 && y != 0)
-                            damage *= GameConstants.ARTILLERY_SPLASH_RATIO;
+            // Calculate the damage for attacking this square
+            // If the robot is shielded, damage is less useful
+            // If the damage would kill the robot, there's a bonus
+            direct = RobotType.ARTILLERY.attackPower;
+            splash = direct*GameConstants.ARTILLERY_SPLASH_RATIO;
+            direct = Math.max(direct-info.shields, 0) +
+                     Math.min(direct, info.shields)*SHIELD_MULT +
+                     ((direct > info.shields+info.energon)?KILL_BONUS:0);
+            splash = Math.max(splash-info.shields, 0) +
+                     Math.min(splash, info.shields)*SHIELD_MULT +
+                     ((splash > info.shields+info.energon)?KILL_BONUS:0);
 
-                        // Damage is good, killing is good, waste is bad,
-                        //  so apply a little detriment for excess damage
-                        val += map[i+x][j+y][0]*(damage-Math.abs(map[i+x][j+y][1]-damage));
+            // Now add these damages to the array.  The current square
+            //  should get the direct bonus, while the surrounding squares
+            //  should get the splash bonus.  Calculate the maximum at the
+            //  same time.
+            for(int j = 1; j <= 1; j++) {
+                x = tmp.x+j;
+                for(int k = -1; k <= 1; k++) {
+                    y = tmp.y+k;
+                    if(x >= 0 && x < map.length && y >= 0 && y < map[x].length) {
+                        if(j == 0 && k == 0)
+                            map[x][y] += direct;
+                        else
+                            map[x][y] += splash;
+
+                        if(map[x][y] > maxval || (map[x][y] == maxval &&
+                           (x-r)*(x-r)+(y-r)*(y-r) < maxx*maxx+maxy*maxy)) {
+                            maxx = x-r;
+                            maxy = y-r;
+                            maxval = map[x][y];
+                        }
                     }
                 }
-
-                // Now check val against the current max
-                tmp = rc.getLocation().add(i-r, j-r);
-                if(best == null || val > maxval ||
-                   (val == maxval &&
-                   rc.getLocation().distanceSquaredTo(best) < rc.getLocation().distanceSquaredTo(tmp))) {
-                    best = tmp;
-                    maxval = val;
-                }
             }
         }
 
-        // If the best map location is not null, FIRE!
-        if(best != null) rc.attackSquare(best);
+        // If we've found a good coordinate, fire!
+        if(maxx != -1000) {
+            rc.setIndicatorString(0, "Last attack at (" + maxx + ", " + maxy + ")");
+            rc.attackSquare(rc.getLocation().add(maxx, maxy));
+        }
 
         // Keep the same ai for next round
         return this;
