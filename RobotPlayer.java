@@ -21,7 +21,7 @@ public class RobotPlayer {
         case GENERATOR:
             return new GeneratorAI();
         case HQ:
-            return new MinerHQAI();
+            return new HQAI(rc);
         case MEDBAY:
             return new MedbayAI();
         case SHIELDS:
