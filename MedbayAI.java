@@ -11,6 +11,6 @@ public class MedbayAI extends AI {
         rc.setIndicatorString(0, "I am a Medbay!");
 
         // Keep the same ai for next round
-        return this;
+        return new FindPathAI(rc);
     }
 }
