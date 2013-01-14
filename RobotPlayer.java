@@ -46,12 +46,13 @@ public class RobotPlayer {
             try {
                 ai.do_upkeep(rc);
                 ai = ai.act(rc);
-                rc.yield();
             } catch(Exception e) {
                 // Wear the error hat!
                 rc.wearHat();
                 e.printStackTrace();
             }
+
+            rc.yield();
         }
 
         // This robot doesn't have another ai to use, might
