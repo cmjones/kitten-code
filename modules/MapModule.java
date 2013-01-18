@@ -172,6 +172,47 @@ public class MapModule {
         // And we're done
         return retval;
     }
+    
+    public void shortpath(RobotController rc){
+    	PathNode[][] map_nodes;
+    	
+    	map_nodes = new PathNode[mapwidth][mapheight];
+    	//First need to find what, exactly, the rotational line of the map is.
+    	//Checks to see what the direction from the center to the hq is, and bases its deduction from that.
+    	//Also fills an array full of points along the line.
+    	//Problem: Sometimes, even though the HQ is a diagonal from the center the movement AI still tells it to go north/east/south/west instead. Returns wrong
+    	//		rotational line. Can be fixed by using distance-from-corner calculations instead. Might take up more memory.
+    	MapLocation desti = new MapLocation(mapwidth -1, mapheight -1);
+       	MapLocation temp = new MapLocation(0, 0);
+       	int diagonal = (int)Math.sqrt(mapwidth * mapwidth + mapheight*mapheight);
+    	MapLocation[] linelocs = new MapLocation[diagonal];
+    	switch (temp.directionTo(rc.senseHQLocation())) {
+    	case NORTH_EAST: case SOUTH_WEST:
+    		temp = new MapLocation(0, 0);
+    		desti = new MapLocation(mapwidth - 1, mapheight - 1);
+    		break;
+    	case NORTH: case SOUTH:
+    		temp = new MapLocation(0, mapheight/2);
+    		desti = new MapLocation(mapwidth - 1, mapheight/2);
+    		break;
+    	case NORTH_WEST: case SOUTH_EAST:
+    		temp = new MapLocation(mapwidth-1,0);
+    		desti = new MapLocation(0, mapheight - 1);
+    		break;
+    	case WEST: case EAST:
+    		temp = new MapLocation(mapwidth/2,0);
+    		desti = new MapLocation(mapwidth/2, mapheight - 1);
+    		break;
+    	}
+     	linelocs[0] = temp;
+     	for(int i = 1; i < diagonal; i ++){
+     		temp = temp.add(temp.directionTo(desti));
+     		linelocs[i] = temp;
+     	}
+    	
+    	//I honestly don't know where to go from here. Sorry.
+    	
+    }
 }
 
 
@@ -201,27 +242,34 @@ class PathNode {
      *  or this node.
      */
     public PathNode push(PathNode node) {
-        if(node.estimateCost <= estimateCost) {
-            // Handle previous links
-            if(prev != null)
-                prev.next = node;
-            node.prev = prev;
-
-            // Handle next links
-            node.next = this;
-            prev = node;
-            return node;
-        } else {
-            if(next != null) {
-                next.push(node);
-            } else {
-                // Handle appending to the end of the list
-                next = node;
-                node.prev = this;
-            }
-
-            return this;
-        }
+    	PathNode temp = this;
+    	do{
+	        if(node.estimateCost <= temp.estimateCost) {
+	            // Handle previous links
+	            if(temp.prev != null)
+	                temp.prev.next = node;
+	            node.prev = temp.prev;
+	
+	            // Handle next links
+	            node.next = temp;
+	            temp.prev = node;
+	            if(temp == this){
+	            	return node;
+	            } else {
+	            	return this;
+	            }
+	        }
+	        if(temp.next != null){
+	        	temp = temp.next;
+	        } else {
+	        	break;
+	        }
+    	}while(true);
+	    // Handle appending to the end of the list
+	    temp.next = node;
+	    node.prev = temp;
+	
+	    return this;
     }
 
     /** Pops this node off of the list.

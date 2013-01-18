@@ -3,6 +3,7 @@ package team197;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.Clock;
 
 import team197.modules.NavModule;
 import team197.modules.FightModule;
@@ -15,7 +16,8 @@ public class MinesweeperAI extends SoldierAI {
     Direction d;
 	MapLocation gotoloc;
     int type;
-    
+
+    boolean contcheck = true;
     public MinesweeperAI(RobotController rc, SoldierAI oldme, int type_get){
     	super(rc, oldme);
     	type = type_get;
@@ -44,7 +46,10 @@ public class MinesweeperAI extends SoldierAI {
         MapLocation checkdown;
         MapLocation checkleft;
 
-
+        if(Clock.getRoundNum()%15 == 2 && contcheck == true){
+           contcheck = hear_waypoints(rc);
+        }
+        
         // If we can't do anything, don't do anything
         if(!rc.isActive()) return this;
 

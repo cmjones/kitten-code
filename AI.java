@@ -2,6 +2,7 @@ package team197;
 
 import battlecode.common.Clock;
 import battlecode.common.RobotController;
+import battlecode.common.MapLocation;
 
 import team197.modules.RadioModule;
 
@@ -14,6 +15,9 @@ import team197.modules.RadioModule;
  *  robot to suicide.
  */
 public abstract class AI {
+
+	MapLocation[] waypoint_heard;
+	int num_heard;
     public static final int JOB_STANDARD = 1,
                             JOB_MINESWEEPER_L = 2,
                             JOB_MINESWEEPER_M = 3,
@@ -42,4 +46,51 @@ public abstract class AI {
     }
 
     abstract public AI act(RobotController rc) throws Exception;
+    
+    public void broadcast_waypoints(RobotController rc, MapLocation waypoints, int curpoint, int totpoint){
+
+    	//Format:
+    	// 00 0000000 0000000 0000 0000
+    	// * |   x   |   y   |cur |tot
+    	// * = marker to tell that the findpathAI that yes, this is its own message.
+    		int msgbuf = 0;
+    		//msgbuf = 1 << 23;
+    		//System.out.print("1");
+    		msgbuf = waypoints.x << 15;
+    		//System.out.print(" " + waypoints[curpoint].x);
+    		msgbuf += waypoints.y << 8;
+    		//System.out.print(" " + waypoints[curpoint].y);
+    		msgbuf += curpoint << 4;
+    		//System.out.print(" " + curpoint +"\n");
+    		msgbuf += totpoint;
+    		//System.out.print(" " + totpoint +"\n");
+    		//System.out.println(((msgbuf>>>15)) +" " + ((msgbuf>>>8)&0x7F) + " " + ((msgbuf>>>4)&0xF));
+    		radio.write(rc, radio.CHANNEL_PATH_ENCAMP, msgbuf);
+    		
+    }
+    
+    //THIS FUNCTION WORKS
+    //IT JUST FIRES AT RANDOM ROUNDS!!!! (angry face here)
+    
+    public boolean hear_waypoints(RobotController rc){
+    	
+    		//System.out.println("I fired");
+    		int message = radio.read(rc, radio.CHANNEL_PATH_ENCAMP);
+    		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
+    		if(message != 0){
+    		if(waypoint_heard == null){
+    			waypoint_heard = new MapLocation[message&0xF];
+    		} else if(num_heard == waypoint_heard.length){
+    			return false;
+    		}
+	    	if(waypoint_heard[(message >>> 4)&0xF] == null){
+	    		waypoint_heard[(message >>> 4)&0xF] = new MapLocation((message >>> 15)&0x7F, (message >>> 8)&0x7F);
+	    		num_heard += 1;
+	    		System.out.println("I just got the point " + waypoint_heard[(message >>> 4)&0xF].x + " " + waypoint_heard[(message >>> 4)&0xF].y);
+	    	}
+	    	return true;
+    		
+    	}
+    		return true;
+    }
 }
