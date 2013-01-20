@@ -22,6 +22,8 @@ public class FindPathAI extends AI {
     private MapLocation destination;
     int channelcheck;
     int message_sent;
+	int curpoint;
+	int totpoint;
 
 
     public FindPathAI(RobotController rc){
@@ -33,16 +35,27 @@ public class FindPathAI extends AI {
     public AI act(RobotController rc) throws Exception {
         if(Clock.getRoundNum()%15 == 1){
             channelcheck = radio.readTransient(rc, radio.CHANNEL_PATH_ENCAMP);
-            if(channelcheck != 1 && channelcheck != 0){
+            //System.out.println(channelcheck >>> 22);
+            if( channelcheck != 0){
+            	curpoint = 0;
+            	//map.shortpath(rc);
                 System.out.println("Starting.");
                 destination = new MapLocation(channelcheck >>> 7, channelcheck&0x1);
                 message_sent = 0;
                 waypoints = map.make_path(rc, rc.senseHQLocation(), destination);
+                totpoint = waypoints.length;
                 System.out.println("Finished!");
+            } else if(channelcheck == 0 && waypoints[0] != null){
+            	broadcast_waypoints(rc, waypoints[curpoint], curpoint, totpoint);
+            	if(curpoint < totpoint - 1){
+            		curpoint += 1;
+            	} else {
+            		curpoint = 0;
+            	}
             }
         }
         if(Clock.getRoundNum()%15 == 0 && message_sent == 0){
-                radio.write(rc, radio.CHANNEL_PATH_ENCAMP, 1);
+                radio.write(rc, radio.CHANNEL_PATH_ENCAMP, 1 << 22);
                 message_sent = 1;
         }
 

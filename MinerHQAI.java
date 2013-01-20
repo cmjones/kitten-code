@@ -59,7 +59,9 @@ public class MinerHQAI extends HQAI {
                     		requestPath(rc, enemyhqloc);
                     		requested = 1;
                     	}
-                    } else{
+                    } else if (robotCount < 2){
+                    	makeRobot(rc, 0, AI.JOB_MINESWEEPER_L);
+                    }else{
                         rc.researchUpgrade(Upgrade.NUKE);
                     }
                     

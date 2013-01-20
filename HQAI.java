@@ -66,7 +66,7 @@ public class HQAI extends AI {
         
         MapLocation[] encamps = rc.senseAllEncampmentSquares();
         for(int i = 0; i < encamps.length; i ++){
-        	internalmap[encamps[i].x][badmineslocs[i].y] = 2;
+        	internalmap[encamps[i].x][encamps[i].y] = 2;
         }
     }
 
@@ -75,7 +75,7 @@ public class HQAI extends AI {
             robotCount = radio.read(rc, RadioModule.CHANNEL_CHECKIN);
             	for(int i = check_msgs.length - 1; i >= 0; i --){
 	        	 if(check_msgs[i] != 0){
-	        		 if(radio.read(rc, RadioModule.CHANNEL_PATH_ENCAMP) == 1){
+	        		 if(radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP) >>> 22 == 1){
 	        			 check_msgs[i] = 0;
 	        			 System.out.println("Heeey!");
 	        		 } else {
