@@ -89,7 +89,7 @@ public class HQAI extends AI {
 
     public AI act(RobotController rc) throws Exception {
     	makeInternalMap(rc);
-        return new MinerHQAI(rc, this);
+        return new Begin1HQAI(rc, this);
     }
     
     public void makeRobot(RobotController rc, int data, int job) throws GameActionException{

@@ -17,10 +17,10 @@ public class BuilderAI extends SoldierAI {
 	MapLocation target;
 	public BuilderAI(RobotController rc, SoldierAI oldme, int navdata){
 		super(rc, oldme);
-		System.out.println(navdata);
 		buildermessage = navdata;
 		xdesti = buildermessage >>> 13;
 		ydesti = (buildermessage >>> 6)&0x7F;
+		//System.out.println(xdesti + " " + ydesti);
 		buildingtype = buildermessage&0x3F;
 		target = new MapLocation(xdesti, ydesti);
 		nav.setDestination(rc,target);

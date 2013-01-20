@@ -63,7 +63,7 @@ public abstract class AI {
     		msgbuf += curpoint << 4;
     		//System.out.print(" " + curpoint +"\n");
     		msgbuf += totpoint;
-    		//System.out.print(" " + totpoint +"\n");
+    		//System.out.println(curpoint + " " + totpoint);
     		//System.out.println(((msgbuf>>>15)) +" " + ((msgbuf>>>8)&0x7F) + " " + ((msgbuf>>>4)&0xF));
     		radio.write(rc, radio.CHANNEL_PATH_ENCAMP, msgbuf);
     		
@@ -77,20 +77,19 @@ public abstract class AI {
     		//System.out.println("I fired");
     		int message = radio.read(rc, radio.CHANNEL_PATH_ENCAMP);
     		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
-    		if(message != 0){
-    		if(waypoint_heard == null){
-    			waypoint_heard = new MapLocation[message&0xF];
-    		} else if(num_heard == waypoint_heard.length){
-    			return false;
-    		}
-	    	if(waypoint_heard[(message >>> 4)&0xF] == null){
-	    		waypoint_heard[(message >>> 4)&0xF] = new MapLocation((message >>> 15)&0x7F, (message >>> 8)&0x7F);
-	    		num_heard += 1;
-	    		System.out.println("I just got the point " + waypoint_heard[(message >>> 4)&0xF].x + " " + waypoint_heard[(message >>> 4)&0xF].y);
-	    	}
-	    	return true;
+    		if(message != 0 && message != 1 << 22){
+	    		if(waypoint_heard == null){
+	    			waypoint_heard = new MapLocation[message&0xF];
+	    		} else if(num_heard == waypoint_heard.length){
+	    			return false;
+	    		}else if(waypoint_heard[(message >>> 4)&0xF] == null){
+		    		waypoint_heard[(message >>> 4)&0xF] = new MapLocation((message >>> 15)&0x7F, (message >>> 8)&0x7F);
+		    		num_heard += 1;
+		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 4)&0xF].x + " " + waypoint_heard[(message >>> 4)&0xF].y);
+		    	}
+		    	return true;
     		
-    	}
+    		}
     		return true;
     }
 }

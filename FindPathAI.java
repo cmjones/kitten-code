@@ -45,7 +45,7 @@ public class FindPathAI extends AI {
                 waypoints = map.make_path(rc, rc.senseHQLocation(), destination);
                 totpoint = waypoints.length;
                 System.out.println("Finished!");
-            } else if(channelcheck == 0 && waypoints[0] != null){
+            } else if(channelcheck == 0 && waypoints != null && waypoints[0] != null){
             	broadcast_waypoints(rc, waypoints[curpoint], curpoint, totpoint);
             	if(curpoint < totpoint - 1){
             		curpoint += 1;
