@@ -182,10 +182,11 @@ public class MapModule {
         retval = new MapLocation[3][];
         retval[0] = new MapLocation[numClosest];
 
-        // A square is unvisited if the map_costs value is equal to 0.  To avoid
-        //  revisiting the start location, mark it with -1.
+        // Squares are visited only if the new estimate for distance is
+        //  smaller than the old.  So put a dummy value for a path to
+        //  the HQ.  This allows the first node to be expanded properly.
         path = new PathNode(0, 0, 0, rc.senseHQLocation());
-        map_costs[path.loc.x][path.loc.y] = -1;
+        map_costs[path.loc.x][path.loc.y] = 1;
 
         // Now do a type of Dijkstra's search for encampments
         lastEncampment = null;
@@ -240,6 +241,10 @@ public class MapModule {
             // Finally, add this location's neighbors to the queue
             for(int i = 0; i < DIRECTIONS.length; i++) {
                 curLoc = cur.loc.add(DIRECTIONS[i]);
+
+                // Don't expand if the new location is outside the map
+                if(curLoc.x < 0 || curLoc.x >= mapwidth || curLoc.y < 0 || curLoc.y >= mapheight)
+                    continue;
 
                 // Add this node to the queue.  Note that there are no
                 //  heuristics for this search.
