@@ -7,6 +7,7 @@ import battlecode.common.RobotController;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
 import battlecode.common.GameActionException;
+import battlecode.common.Team;
 
 import team197.modules.RadioModule;
 
@@ -93,11 +94,15 @@ public class HQAI extends AI {
     }
     
     public void makeRobot(RobotController rc, int data, int job) throws GameActionException{
+        Team mineTeam;
+
     	int msgbuf = (data << 4) + job;
         radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
         Direction dir = enemyHQ;
         do{
-        	if(rc.canMove(dir)){
+        	if(rc.canMove(dir) &&
+                   ((mineTeam = rc.senseMine(rc.getLocation().add(dir))) == null ||
+                    mineTeam == rc.getTeam())){
         		rc.spawn(dir);
         		break;
         	}
