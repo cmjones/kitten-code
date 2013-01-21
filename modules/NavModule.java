@@ -28,8 +28,9 @@ public class NavModule {
     private static final double FLOCK_ALLY_WEIGHT = 16.0,
                                 FLOCK_HORIZ_SCALE = 2.5;
     private static final int FLOCK_ALLY_RADIUS = 16;
-    private MapLocation dest;
-    private int navRounds;
+    private MapLocation destination;
+    private MapLocation[] waypoints;
+    private int curWaypoint;
 
     public int mapWidth,
                mapHeight;
@@ -40,6 +41,7 @@ public class NavModule {
     public NavModule(RobotController rc) {
         mapWidth = rc.getMapWidth();
         mapHeight = rc.getMapHeight();
+        curWaypoint = -1;
     }
 
     /** Sets the current destination of this robot.
@@ -48,8 +50,81 @@ public class NavModule {
      */
     public void setDestination(RobotController rc, MapLocation ml) {
         // Set the destination
-        dest = ml;
-        navRounds = 0;
+        destination = ml;
+        waypoints = new MapLocation[0];
+        curWaypoint = 0;
+    }
+
+    /** Sets the current destination of this robot.
+     * Also sets a set of waypoints to use along thew way. Navigation
+     *  routines will navigate to each waypoint in turn before going
+     *  to the destination.  When the waypoints are first set, the
+     *  module will pick the closest waypoint to navigate to first.
+     *
+     * Its fine if the destination is also the last point in the
+     *  waypoint array.
+     */
+    public void setDestination(RobotController rc, MapLocation ml, MapLocation[] waypoints) {
+        MapLocation cur;
+        int lastDist,
+            curDist;
+
+        destination = ml;
+        this.waypoints = waypoints;
+
+        // If the last waypoint is the destination, set it to null.
+        if(waypoints[waypoints.length-1] == ml)
+            waypoints[waypoints.length-1] = null;
+
+        // Grab the robot's current location
+        cur = rc.getLocation();
+
+        // Search through the array and find the 'closest' waypoint.
+        //  'closest' means the first waypoint for which the next
+        //  waypoint is further away.
+        lastDist = 1000000;
+        for(curWaypoint = 0; curWaypoint < waypoints.length; curWaypoint++) {
+            // Skip empty waypoints
+            if(waypoints[curWaypoint] == null) continue;
+
+            // If the distance to this waypoint is greater than the last
+            //  distance, we've found the first waypoint to navigate to.
+            curDist = cur.distanceSquaredTo(waypoints[curWaypoint]);
+            if(curDist > lastDist) {
+                curWaypoint--;
+                break;
+            } else {
+                lastDist = curDist;
+            }
+        }
+    }
+
+    // Helper function to grab the current point to navigate to.  Also handles
+    //  moving on to the next waypoint.  If we've reached the destination,
+    //  returns null.
+    //
+    // Navigates to within 'distance' squared units away from each waypoint
+    private MapLocation getDest(MapLocation cur, int distance) {
+        if(curWaypoint < waypoints.length) {
+            // Check if we still need to navigate to the waypoint
+            if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
+                return waypoints[curWaypoint];
+
+            // Loop through the waypoint array to get the next non-null waypoint
+            for(curWaypoint++; curWaypoint < waypoints.length && waypoints[curWaypoint] == null; curWaypoint++);
+
+            // If we still have waypoints left, navigate to the next one.
+            if(curWaypoint < waypoints.length)
+                return waypoints[curWaypoint];
+        }
+
+        // Check our location against the destination.
+        if(cur.equals(destination)) {
+            // We've reached our destination!
+            return null;
+        } else {
+            return destination;
+        }
     }
 
     // Helper function that finds a valid move direction, prioritizing
@@ -77,19 +152,19 @@ public class NavModule {
      *  them.
      */
     public Direction moveSimple(RobotController rc) {
-        MapLocation cur;
-        Direction d;
+        MapLocation cur,
+                    target;
 
-        // Grab the robot's current location, and increment NavRounds
+        // Grab the robot's current location and the current target
         cur = rc.getLocation();
-        navRounds++;
+        target = getDest(cur, 2);
 
         // Check to see if we've arrived yet
-        if(dest == null || (d = cur.directionTo(dest)) == Direction.OMNI)
+        if(target == null)
             return Direction.OMNI;
 
         // Check directions to move, prioritizing forward
-        return findMove(rc, d);
+        return findMove(rc, cur.directionTo(target));
     }
 
     /** Navigates to the destination while keeping distance from allies.
@@ -98,17 +173,19 @@ public class NavModule {
      *  away from allies within a certain radius.
      */
     public Direction moveFlock(RobotController rc) throws GameActionException {
-        MapLocation cur, tmp;
+        MapLocation cur,
+                    tmp,
+                    target;
         Robot[] allies;
         Direction d;
         double tx, ty, ux, uy, dx, dy, mult;
 
-        // Grab the robot's current location and increment NavRounds
+        // Grab the robot's current location and the current target
         cur = rc.getLocation();
-        navRounds++;
+        target = getDest(cur, FLOCK_ALLY_RADIUS);
 
         // Check to see if we've arrived yet
-        if(dest == null || (d = cur.directionTo(dest)) == Direction.OMNI)
+        if(target == null)
             return Direction.OMNI;
 
         // Grab a list of nearby allied robots.  If this array is blank,
@@ -117,8 +194,8 @@ public class NavModule {
         allies = rc.senseNearbyGameObjects(Robot.class, FLOCK_ALLY_RADIUS, rc.getTeam());
 
         // Record the direction towards the destination.
-        dx = dest.x-cur.x;
-        dy = dest.y-cur.y;
+        dx = target.x-cur.x;
+        dy = target.y-cur.y;
 
         // Step through the array of allies, moving away from each
         //  ally with a given weight.  Allies that are further away

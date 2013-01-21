@@ -9,7 +9,6 @@ public class MapModule {
     public static final int MAX_WAYPOINTS = 10;
 
     private static final int GROUND_OPEN = 0,
-                             GROUND_NEARMINE = 4,
                              GROUND_MINE = 12,
                              GROUND_ENCAMPMENT = 1; //Placeholder no; doesn't matter b/c will be checked against
     private static final Direction[] DIRECTIONS = new Direction[] {Direction.NORTH_WEST, Direction.NORTH, Direction.NORTH_EAST,
@@ -23,7 +22,6 @@ public class MapModule {
                 fscore;
     private MapLocation start,
                         end;
-    boolean path_found;
 
 
     public MapModule(RobotController rc) {
@@ -44,22 +42,15 @@ public class MapModule {
         // to walk through it.
         map_weights = new int[mapwidth][mapheight];
 
+        // Place all of the mines onto the map
         locs = rc.senseNonAlliedMineLocations(new MapLocation(0,0),mapheight * mapheight + mapwidth * mapwidth);
-        for(int i = 0; i < locs.length; i ++) {
-            for(int j = -1; j <= 1; j++) {
-                map_weights[locs[i].x][locs[i].y] = GROUND_MINE;
-/*                for(int k = -1; k <= 1; k++) {
-                    x = locs[i].x+j;
-                    y = locs[i].y+k;
-                    if(x >= 0 && x < mapwidth && y >= 0 && y < mapheight) {
-                        if(j == 0 && k == 0)
-                            map_weights[x][y] = GROUND_MINE;
-                        else if(map_weights[x][y] == 0)
-                            map_weights[x][y] = GROUND_NEARMINE;
-                    }
-                }*/
-            }
-        }
+        for(int i = 0; i < locs.length; i ++)
+            map_weights[locs[i].x][locs[i].y] = GROUND_MINE;
+
+        // Place all of the encampments
+        locs = rc.senseAllEncampmentSquares();
+        for(int i = 0; i < locs.length; i++)
+            map_weights[locs[i].x][locs[i].y] = GROUND_ENCAMPMENT;
     }
 
     /** Searches for the shortest path between the start and end destinations.
@@ -172,46 +163,98 @@ public class MapModule {
         // And we're done
         return retval;
     }
-    
-    public void shortpath(RobotController rc){
-    	PathNode[][] map_nodes;
-    	
-    	map_nodes = new PathNode[mapwidth][mapheight];
-    	//First need to find what, exactly, the rotational line of the map is.
-    	//Checks to see what the direction from the center to the hq is, and bases its deduction from that.
-    	//Also fills an array full of points along the line.
-    	//Problem: Sometimes, even though the HQ is a diagonal from the center the movement AI still tells it to go north/east/south/west instead. Returns wrong
-    	//		rotational line. Can be fixed by using distance-from-corner calculations instead. Might take up more memory.
-    	MapLocation desti = new MapLocation(mapwidth -1, mapheight -1);
-       	MapLocation temp = new MapLocation(0, 0);
-       	int diagonal = (int)Math.sqrt(mapwidth * mapwidth + mapheight*mapheight);
-    	MapLocation[] linelocs = new MapLocation[diagonal];
-    	switch (temp.directionTo(rc.senseHQLocation())) {
-    	case NORTH_EAST: case SOUTH_WEST:
-    		temp = new MapLocation(0, 0);
-    		desti = new MapLocation(mapwidth - 1, mapheight - 1);
-    		break;
-    	case NORTH: case SOUTH:
-    		temp = new MapLocation(0, mapheight/2);
-    		desti = new MapLocation(mapwidth - 1, mapheight/2);
-    		break;
-    	case NORTH_WEST: case SOUTH_EAST:
-    		temp = new MapLocation(mapwidth-1,0);
-    		desti = new MapLocation(0, mapheight - 1);
-    		break;
-    	case WEST: case EAST:
-    		temp = new MapLocation(mapwidth/2,0);
-    		desti = new MapLocation(mapwidth/2, mapheight - 1);
-    		break;
-    	}
-     	linelocs[0] = temp;
-     	for(int i = 1; i < diagonal; i ++){
-     		temp = temp.add(temp.directionTo(desti));
-     		linelocs[i] = temp;
-     	}
-    	
-    	//I honestly don't know where to go from here. Sorry.
-    	
+
+    public MapLocation[][] findEncampments(RobotController rc, int numClosest){
+        MapLocation[][] retval;
+        MapLocation curLoc;
+        int[][] map_costs;
+        PathNode path,
+                 cur,
+                 tmp,
+                 lastEncampment;
+        int encamp_i,
+            cost;
+        boolean stop;
+
+        // First recalculate the weights for the map and initialize map
+        recalc_weights(rc);
+        map_costs = new int[mapwidth][mapheight];
+        retval = new MapLocation[3][];
+        retval[0] = new MapLocation[numClosest];
+
+        // A square is unvisited if the map_costs value is equal to 0.  To avoid
+        //  revisiting the start location, mark it with -1.
+        path = new PathNode(0, 0, 0, rc.senseHQLocation());
+        map_costs[path.loc.x][path.loc.y] = -1;
+
+        // Now do a type of Dijkstra's search for encampments
+        lastEncampment = null;
+        encamp_i = 0;
+        stop = false;
+        while(path != null) {
+            // Get the next location to expand
+            cur = path;
+            path = path.pop();
+
+            // If this square is marked with a negative value smaller than -1,
+            //  we've hit the opposed search.  This means we should stop searching
+            //  after we find the next encampment, and stop the opposed search.
+            if(map_costs[cur.loc.x][cur.loc.y] < -1)
+                stop = true;
+            else if(map_costs[cur.loc.x][cur.loc.y] != 0 ||
+                    map_costs[cur.loc.x][cur.loc.y] <= cur.estimateCost)
+                continue;
+
+            // If this square is an encampment, we should record it's location
+            if(map_weights[cur.loc.x][cur.loc.y] == GROUND_ENCAMPMENT) {
+                // Only record up to numClosest locations
+                if(encamp_i < numClosest)
+                    retval[0][encamp_i++] = cur.loc;
+
+                // If we're stopping, then 'cur' and 'lastEncampment' should
+                //  be rotationally symmetrical encampments.  These are the two
+                //  encampments to record paths for.
+                if(stop) {
+                    // Record lastEncampment (the closer encampment to us) first
+                    retval[1] = new MapLocation[lastEncampment.pathLength];
+                    tmp = lastEncampment;
+                    for(int i = 0; i < lastEncampment.pathLength; i++, tmp = tmp.nextpath)
+                        retval[1][lastEncampment.pathLength-i-1] = tmp.loc;
+
+                    // Record cur (the farther encampment to us) next
+                    retval[1] = new MapLocation[cur.pathLength];
+                    tmp = cur;
+                    for(int i = 0; i < cur.pathLength; i++, tmp = tmp.nextpath)
+                        retval[1][cur.pathLength-i-1] = tmp.loc;
+
+                    break;
+                } else {
+                    lastEncampment = cur;
+                }
+            }
+
+            // Now mark the map and it's rotationally symmetrical counterpart
+            map_costs[cur.loc.x][cur.loc.y] = cur.estimateCost;
+            map_costs[mapwidth-cur.loc.x][mapheight-cur.loc.y] = -cur.estimateCost;
+
+            // Finally, add this location's neighbors to the queue
+            for(int i = 0; i < DIRECTIONS.length; i++) {
+                curLoc = cur.loc.add(DIRECTIONS[i]);
+
+                // Add this node to the queue.  Note that there are no
+                //  heuristics for this search.
+                cost = cur.pathCost+map_weights[curLoc.x][curLoc.y]+1;
+                tmp = new PathNode(cost, cur.pathLength+1, cost, curLoc);
+                tmp.nextpath = cur;
+                if(path != null)
+                    path = path.enqueue(tmp);
+                else
+                    path = tmp;
+            }
+        }
+
+        // Finally, return
+        return retval;
     }
 }
 
@@ -219,7 +262,11 @@ public class MapModule {
 /** Node for a priority queue of map locations, used to find shortest paths.
  * Each node holds a reference to the next node in the queue as well as
  *  the next node in a possible path.  Once the algorithm is complete, following
- *  'nextPath' should bring you from the start to the end.
+ *  'nextpath' should bring you from the start to the end.
+ *
+ * The double-linked list part of the PathNode, internally, is a circular queue.
+ *  This means that the heads of lists know about the tails, so things can be
+ *  appended to the end very easily.  It also makes link upkeep much simpler.
  */
 class PathNode {
     PathNode nextpath,
@@ -235,6 +282,9 @@ class PathNode {
         this.pathLength = pathLength;
         this.estimateCost = estimateCost;
         this.loc = loc;
+
+        prev = this;
+        next = this;
     }
 
     /** Adds the given node to the list starting at this node.
@@ -242,34 +292,68 @@ class PathNode {
      *  or this node.
      */
     public PathNode push(PathNode node) {
-    	PathNode temp = this;
-    	do{
-	        if(node.estimateCost <= temp.estimateCost) {
-	            // Handle previous links
-	            if(temp.prev != null)
-	                temp.prev.next = node;
-	            node.prev = temp.prev;
-	
-	            // Handle next links
-	            node.next = temp;
-	            temp.prev = node;
-	            if(temp == this){
-	            	return node;
-	            } else {
-	            	return this;
-	            }
-	        }
-	        if(temp.next != null){
-	        	temp = temp.next;
-	        } else {
-	        	break;
-	        }
-    	}while(true);
-	    // Handle appending to the end of the list
-	    temp.next = node;
-	    node.prev = temp;
-	
-	    return this;
+    	PathNode temp;
+
+        // Loop through the queue to find where the node should
+        // be inserted, starting from the front.
+        temp = this;
+        do {
+            if(node.estimateCost <= temp.estimateCost) {
+                node.prev = temp.prev;
+                node.next = temp;
+                temp.prev.next = node;
+                temp.prev = node;
+
+                // If temp is the current node, that means
+                // 'node' is the new head of the list
+                if(temp == this)
+                    return node;
+                else
+                    return this;
+            }
+
+            temp = temp.next;
+        } while(temp != this);
+
+        // If we make it here, the node should be placed
+        // at the end of the list.
+        node.prev = prev;
+        node.next = this;
+        prev.next = node;
+        prev = node;
+        return this;
+    }
+
+    /** Adds the given node to the list starting at the end of
+     *   of the list.
+     * Returns the head of the new list, which is either 'node'
+     *  or this node.
+     */
+    public PathNode enqueue(PathNode node) {
+    	PathNode temp;
+
+        // Loop through the queue to find where the node should
+        // be inserted, starting from the back;
+        temp = this.prev;
+        do {
+            if(node.estimateCost > temp.estimateCost) {
+                node.prev = temp;
+                node.next = temp.next;
+                temp.next.prev = node;
+                temp.next = node;
+                return this;
+            }
+
+            temp = temp.prev;
+        } while(temp != this);
+
+        // If we make it here, the node should be placed
+        // at the start of the list.
+        node.prev = this;
+        node.next = next;
+        next.prev = node;
+        next = node;
+        return node;
     }
 
     /** Pops this node off of the list.
@@ -278,11 +362,18 @@ class PathNode {
     public PathNode pop() {
         PathNode tmp;
 
-        if(next != null)
-            next.prev = prev;
-
+        // If this is the only node in the list, the new list
+        //  is null.
         tmp = next;
-        next = null;
+        if(tmp != this) {
+            prev.next = next;
+            next.prev = prev;
+        } else {
+            tmp = null;
+        }
+
+        prev = this;
+        next = this;
         return tmp;
     }
 
@@ -293,15 +384,10 @@ class PathNode {
         if(this == node)
             return pop();
 
-        // Take care of the previous links
-        if(node.prev != null)
-            node.prev.next = node.next;
-        node.prev = null;
-
-        // Take care of the next links
-        if(node.next != null)
-            node.next.prev = node.prev;
-        node.next = null;
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
+        node.prev = node;
+        node.next = node;
 
         return this;
     }
