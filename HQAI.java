@@ -33,6 +33,7 @@ public class HQAI extends AI {
 	
 	
  public HQAI(RobotController rc) {
+	 super(rc);
         robotCount = 0;
         enemyHQ = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
     }
@@ -103,6 +104,7 @@ public class HQAI extends AI {
         	}
         } while((dir = dir.rotateLeft()) != enemyHQ);
     }
+    
 
     public void requestPath(RobotController rc, MapLocation desti){
     	int buf = desti.x << 7;

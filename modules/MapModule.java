@@ -192,6 +192,7 @@ public class MapModule {
         encamp_i = 0;
         stop = false;
         while(path != null) {
+        	System.out.println("Hey");
             // Get the next location to expand
             cur = path;
             path = path.pop();

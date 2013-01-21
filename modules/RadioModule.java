@@ -25,8 +25,8 @@ public class RadioModule {
                             CHANNEL_FREE06 = 5,
                             CHANNEL_FREE07 = 6,
                             CHANNEL_FREE08 = 7,
-                            CHANNEL_FREE09 = 8,
-                            CHANNEL_FREE10 = 9,
+                            CHANNEL_WAYPOINTS_2 = 8,
+                            CHANNEL_WAYPOINTS_1 = 9,
                             CHANNEL_PATH_ENCAMP = 10, 
                             CHANNEL_GETJOB = 11,
                             CHANNEL_CHECKIN = 12;

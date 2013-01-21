@@ -3,6 +3,7 @@ package team197;
 import battlecode.common.Clock;
 import battlecode.common.RobotController;
 import battlecode.common.MapLocation;
+import team197.modules.MapModule;
 
 import team197.modules.RadioModule;
 
@@ -15,7 +16,7 @@ import team197.modules.RadioModule;
  *  robot to suicide.
  */
 public abstract class AI {
-
+	int sendconfo = 0;
 	MapLocation[] waypoint_heard;
 	int num_heard;
     public static final int JOB_STANDARD = 1,
@@ -31,13 +32,22 @@ public abstract class AI {
     		                TOBUILD_SUPPLIER = 5;
 
     protected RadioModule radio;
+    protected MapModule map;
 
     public AI() {
         radio = new RadioModule();
     }
+    
+    public AI(RobotController rc){
+    	radio = new RadioModule();
+    	map = new MapModule(rc);
+    }
 
     public AI(AI oldme) {
         radio = oldme.radio;
+        if(oldme.map != null){
+        	map = oldme.map;
+        }
     }
 
     public void do_upkeep(RobotController rc){
@@ -69,18 +79,17 @@ public abstract class AI {
     		
     }
     
-    //THIS FUNCTION WORKS
-    //IT JUST FIRES AT RANDOM ROUNDS!!!! (angry face here)
     
-    public boolean hear_waypoints(RobotController rc){
+    public boolean hear_waypoints(RobotController rc, int channel){
     	
     		//System.out.println("I fired");
-    		int message = radio.read(rc, radio.CHANNEL_PATH_ENCAMP);
+    		int message = radio.read(rc, channel);
     		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
     		if(message != 0 && message != 1 << 22){
 	    		if(waypoint_heard == null){
 	    			waypoint_heard = new MapLocation[message&0xF];
 	    		} else if(num_heard == waypoint_heard.length){
+	    			sendconfo = 1;
 	    			return false;
 	    		}else if(waypoint_heard[(message >>> 4)&0xF] == null){
 		    		waypoint_heard[(message >>> 4)&0xF] = new MapLocation((message >>> 15)&0x7F, (message >>> 8)&0x7F);
