@@ -372,8 +372,8 @@ class PathNode {
             tmp = null;
         }
 
-        prev = null;
-        next = null;
+        prev = this;
+        next = this;
         return tmp;
     }
 
@@ -386,8 +386,8 @@ class PathNode {
 
         node.prev.next = node.next;
         node.next.prev = node.prev;
-        node.prev = null;
-        node.next = null;
+        node.prev = node;
+        node.next = node;
 
         return this;
     }
