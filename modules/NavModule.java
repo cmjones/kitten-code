@@ -29,8 +29,10 @@ public class NavModule {
                                 FLOCK_HORIZ_SCALE = 2.5;
     private static final int FLOCK_ALLY_RADIUS = 16;
     private MapLocation destination;
-    private MapLocation[] waypoints;
-    private int curWaypoint;
+    private MapLocation[] waypoints,
+                          path;
+    private int curWaypoint,
+                curPathpoint;
 
     public int mapWidth,
                mapHeight;
@@ -109,6 +111,9 @@ public class NavModule {
             // Check if we still need to navigate to the waypoint
             if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
                 return waypoints[curWaypoint];
+
+            // We're at the next waypoint, so clear out our previous path
+            path = null;
 
             // Loop through the waypoint array to get the next non-null waypoint
             for(curWaypoint++; curWaypoint < waypoints.length && waypoints[curWaypoint] == null; curWaypoint++);
@@ -229,5 +234,36 @@ public class NavModule {
             return findMove(rc, d);
         else
             return Direction.NONE;
+    }
+
+    /** Moves to the destination using an A* algorithm.
+     * This function is meant to be used only in conjunction with
+     * waypoints.  Only a portion of the map is searched for a path, so
+     * closer waypoints means a faster search.
+     */
+    public Direction moveAStar(RobotController rc, MapModule mm) throws GameActionException {
+        MapLocation cur,
+                    target;
+
+        // Grab the robot's current location
+        cur = rc.getLocation();
+
+        // If we don't have a path to the next waypoint, recalculated it.
+        //  Also check if we've reached the end of the current path
+        if(path == null || cur.equals(path[path.length-1])) {
+            // Naviagete towards the next waypoint/destination
+            target = getDest(cur, 2);
+            if(target == null) return Direction.OMNI;
+
+            // Recalculate the path using the map module's a* algorithm
+            path = mm.findPath(rc, cur, target, 1);
+            curPathpoint = 0;
+        }
+
+        // If we're at the current path point, go to the next one.
+        if(cur.equals(path[curPathpoint])) curPathpoint++;
+
+        // Now navigate towards the current path point.
+        return findMove(rc, cur.directionTo(path[curPathpoint]));
     }
 }

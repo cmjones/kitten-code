@@ -1,14 +1,15 @@
 package team197.modules;
 
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 import battlecode.common.MapLocation;
-import battlecode.common.Direction;
 
 
 public class MapModule {
-    public static final int MAX_WAYPOINTS = 10;
-
-    private static final int GROUND_OPEN = 0,
+    private static final int SEARCH_SCALE = 3,
+                             SEARCH_MID = 1,
+                             GROUND_OPEN = 0,
                              GROUND_MINE = 12,
                              GROUND_ENCAMPMENT = 1; //Placeholder no; doesn't matter b/c will be checked against
     private static final Direction[] DIRECTIONS = new Direction[] {Direction.NORTH_WEST, Direction.NORTH, Direction.NORTH_EAST,
@@ -20,8 +21,6 @@ public class MapModule {
                 mapheight,
                 gscore,
                 fscore;
-    private MapLocation start,
-                        end;
 
 
     public MapModule(RobotController rc) {
@@ -29,55 +28,75 @@ public class MapModule {
         mapheight = rc.getMapHeight();
     }
 
-    /** Resenses the weights array.
+    /** Resenses the weights array in a limited area.
      * Clears the weights array as a side effect by instantializing
      *  a new array.  Java ensures that the newly created array will
      *  be filled by zeros.
      */
-    private void recalc_weights(RobotController rc){
+    private void recalc_weights(RobotController rc, MapLocation center, int width, int height, int scale) throws GameActionException {
         MapLocation[] locs;
-        int x, y;
+        int x, y, rsquare;
 
         // Clear the map by creating a new array, avoiding the need
         // to walk through it.
+        rsquare = width*width+height*height;
         map_weights = new int[mapwidth][mapheight];
 
         // Place all of the mines onto the map
-        locs = rc.senseNonAlliedMineLocations(new MapLocation(0,0),mapheight * mapheight + mapwidth * mapwidth);
+        locs = rc.senseNonAlliedMineLocations(center, rsquare);
         for(int i = 0; i < locs.length; i ++)
-            map_weights[locs[i].x][locs[i].y] = GROUND_MINE;
+            map_weights[locs[i].x/scale][locs[i].y/scale] += GROUND_MINE;
 
-        // Place all of the encampments
-        locs = rc.senseAllEncampmentSquares();
+        // Mark sections of the map as containing encampments by
+        //  making the weights array odd
+        locs = rc.senseEncampmentSquares(center, rsquare, null);
         for(int i = 0; i < locs.length; i++)
-            map_weights[locs[i].x][locs[i].y] = GROUND_ENCAMPMENT;
+            map_weights[locs[i].x/scale][locs[i].y/scale] |= 1;
     }
 
     /** Searches for the shortest path between the start and end destinations.
      * This is a computationally intensive function that doesn't return until
-     *  the computation is complete.  The returned MapLocation[] is guaranteed
-     *  to be at most MAX_WAYPOINTS long, and should be a good approximation of
-     *  the shortest path from start to end.
+     *  the computation is complete.  The returned MapLocation[] is a step-by-step
+     *  path through the map, which may be approximate.
      */
-    public MapLocation[] make_path(RobotController rc, MapLocation start, MapLocation end){
+    public MapLocation[] findPath(RobotController rc, MapLocation start, MapLocation end, int searchScale) throws GameActionException {
         PathNode[][] map_nodes;
         MapLocation[] retval;
-        MapLocation curLoc;
+        MapLocation curLoc,
+                    center;
         PathNode path,
                  cur,
                  tmp;
         int cost,
             estimate,
-            skip;
+            minw,
+            maxw,
+            minh,
+            maxh;
 
-        // First recalculate the weights for the map and initialize the closed set
-        recalc_weights(rc);
+        // Scale the start and end locations
+        start = new MapLocation(start.x/searchScale, start.y/searchScale);
+        end = new MapLocation(end.x/searchScale, end.y/searchScale);
+
+        // First recalculate the weights for the map and initialize the closed set.
+        //  Only search in a rectangular area around the start and end location. Search
+        //  a larger area when working with a larger scale, since it takes shorter.
+        minw = Math.min(start.x, end.x)-searchScale*2;
+        if(minw < 0) minw = 0;
+        maxw = Math.max(start.x, end.x)+searchScale*2;
+        if(maxw >= mapwidth/searchScale) maxw = mapwidth/searchScale-1;
+        minh = Math.min(start.y, end.y)-searchScale*2;
+        if(minh < 0) minh = 0;
+        maxh = Math.max(start.y, end.y)+searchScale*2;
+        if(maxh >= mapheight/searchScale) maxh = mapheight/searchScale-1;
+        center = new MapLocation((maxw+minw)/2, (maxh+minh)/2);
+        recalc_weights(rc, center, maxw-minw+1, maxh-minh+1, searchScale);
         map_nodes = new PathNode[mapwidth][mapheight];
         System.out.println(" - Recalculated map weights\n");
 
         // We start with 'start' on the queue.  As long as there's a node
         //  on the queue, grab it and expand it.
-        path = new PathNode(0, 0, start.distanceSquaredTo(end), start);
+        path = new PathNode(0, 0, (int)Math.sqrt(start.distanceSquaredTo(end)), start);
         map_nodes[path.loc.x][path.loc.y] = path;
         do {
             // Pop the current node off the queue.
@@ -95,15 +114,15 @@ public class MapModule {
                 // Calculate the new position
                 curLoc = cur.loc.add(DIRECTIONS[i]);
 
-                // Check if the next node is within the map bounds
-                if(curLoc.x < 0 || curLoc.x >= mapwidth ||
-                   curLoc.y < 0 || curLoc.y >= mapheight)
+                // Check if the next node is within the search bounds
+                if(curLoc.x < minw || curLoc.x > maxw ||
+                   curLoc.y < minh || curLoc.y > maxh)
                     continue;
 
                 // The new node should have a path cost of 1 + cur's path cost +
                 //  the value in the weights array for this location.
                 cost = cur.pathCost+map_weights[curLoc.x][curLoc.y]+1;
-                estimate = cost+curLoc.distanceSquaredTo(end);
+                estimate = cost+(int)Math.sqrt(curLoc.distanceSquaredTo(end));
 
                 // Check if this node is already in the queue.  If it is, and
                 //  the new estimate is better than the old one, replace the old
@@ -136,130 +155,172 @@ public class MapModule {
         } while(path != null);
 
         // cur should now contain end, and should form a path to
-        //  start.  If there are less than MAX_WAYPOINTS steps, make
-        //  each one a waypoint.  Otherwise, skip steps so that only
-        //  MAX_WAYPOINTS steps are returned.
+        //  start.  Fill out retval with points corresponding to the
+        //  centers of each map segment.
         //
-        // When skipping, 'end' should be the last element of the
-        //  the array, while it doesn't necessarily start with 'start'
-        if(cur.pathLength < MAX_WAYPOINTS) {
-            skip = 1;
-            retval = new MapLocation[cur.pathLength];
-        } else {
-            skip = cur.pathLength/MAX_WAYPOINTS;
-            retval = new MapLocation[MAX_WAYPOINTS];
-        }
-
-        // Now actually fill out the return value
+        // TODO: ensure this doesn't return locations outside of the map bounds
+        retval = new MapLocation[cur.pathLength];
         for(int i = retval.length-1; i >= 0; i--) {
-            retval[i] = cur.loc;
-            System.out.print("(" + retval[i].x + ", " + retval[i].y+")\n");
-
-            // Skip 'skip' number of nodes
-            for(int k = 0; k < skip; k++)
-                cur = cur.nextpath;
+            retval[i] = new MapLocation(cur.loc.x*searchScale+searchScale/2,
+                                        cur.loc.y*searchScale+searchScale/2);
+            cur = cur.nextpath;
+            System.out.print("PATH: (" + retval[i].x + ", " + retval[i].y + ")\n");
         }
 
         // And we're done
         return retval;
     }
 
-    public MapLocation[][] findEncampments(RobotController rc, int numClosest){
+    public MapLocation[][] findEncampments(RobotController rc, int numClosest, int searchScale) throws GameActionException {
+        PathNode[][] map_nodes;
         MapLocation[][] retval;
-        MapLocation curLoc;
+        MapLocation curLoc,
+                    enemyHQ;
         int[][] map_costs;
         PathNode path,
                  cur,
                  tmp,
                  lastEncampment;
-        int encamp_i,
-            cost;
+        int width,
+            height,
+            encamp_i,
+            cost,
+            estimate,
+            dist,
+            lastdist,
+            lastRotX,
+            lastRotY;
         boolean stop;
 
         // First recalculate the weights for the map and initialize map
-        recalc_weights(rc);
+        width = mapwidth/searchScale;
+        height = mapheight/searchScale;
+        enemyHQ = rc.senseEnemyHQLocation();
+        enemyHQ = new MapLocation(enemyHQ.x/searchScale, enemyHQ.y/searchScale);
+        recalc_weights(rc, rc.senseHQLocation(), mapwidth, mapheight, searchScale);
         map_costs = new int[mapwidth][mapheight];
+        map_nodes = new PathNode[mapwidth][mapheight];
         retval = new MapLocation[3][];
         retval[0] = new MapLocation[numClosest];
 
         // Squares are visited only if the new estimate for distance is
         //  smaller than the old.  So put a dummy value for a path to
         //  the HQ.  This allows the first node to be expanded properly.
-        path = new PathNode(0, 0, 0, rc.senseHQLocation());
+        curLoc = rc.senseHQLocation();
+        path = new PathNode(0, 0, 0, new MapLocation(curLoc.x/searchScale, curLoc.y/searchScale));
         map_costs[path.loc.x][path.loc.y] = 1;
 
         // Now do a type of Dijkstra's search for encampments
         lastEncampment = null;
+        lastdist = 4900;
+        lastRotX = 0;
+        lastRotY = 0;
         encamp_i = 0;
         stop = false;
+int count = 0;
         while(path != null) {
-        	System.out.println("Hey");
+count++;
             // Get the next location to expand
             cur = path;
             path = path.pop();
 
-            // If this square is marked with a negative value smaller than -1,
-            //  we've hit the opposed search.  This means we should stop searching
-            //  after we find the next encampment, and stop the opposed search.
-            if(map_costs[cur.loc.x][cur.loc.y] < -1)
+            // If this square is marked with a negative value, we've hit the
+            //  opposed search.  This means we should stop searching after
+            //  we find the next encampment, and stop the opposed search.
+            if(map_costs[cur.loc.x][cur.loc.y] < 0)
                 stop = true;
-            else if(map_costs[cur.loc.x][cur.loc.y] != 0 ||
+            else if(map_costs[cur.loc.x][cur.loc.y] != 0 &&
                     map_costs[cur.loc.x][cur.loc.y] <= cur.estimateCost)
                 continue;
 
             // If this square is an encampment, we should record it's location
-            if(map_weights[cur.loc.x][cur.loc.y] == GROUND_ENCAMPMENT) {
+            if((map_weights[cur.loc.x][cur.loc.y]&1) == 1) {
                 // Only record up to numClosest locations
                 if(encamp_i < numClosest)
-                    retval[0][encamp_i++] = cur.loc;
+                    retval[0][encamp_i++] = new MapLocation(cur.loc.x*searchScale+searchScale/2,
+                                                            cur.loc.y*searchScale+searchScale/2);
 
                 // If we're stopping, then 'cur' and 'lastEncampment' should
                 //  be rotationally symmetrical encampments.  These are the two
                 //  encampments to record paths for.
                 if(stop) {
-                    // Record lastEncampment (the closer encampment to us) first
-                    retval[1] = new MapLocation[lastEncampment.pathLength];
-                    tmp = lastEncampment;
-                    for(int i = 0; i < lastEncampment.pathLength; i++, tmp = tmp.nextpath)
-                        retval[1][lastEncampment.pathLength-i-1] = tmp.loc;
+                    if(Math.abs(lastRotX-cur.loc.x) <= 1 &&
+                       Math.abs(lastRotY-cur.loc.y) <= 1) {
+                        // Record lastEncampment (the closer encampment to us) first
+                        retval[1] = new MapLocation[lastEncampment.pathLength];
+                        tmp = lastEncampment;
+                        for(int i = 0; i < lastEncampment.pathLength; i++, tmp = tmp.nextpath)
+                            retval[1][lastEncampment.pathLength-i-1] = new MapLocation(tmp.loc.x*searchScale+searchScale/2,
+                                                                                       tmp.loc.y*searchScale+searchScale/2);
 
-                    // Record cur (the farther encampment to us) next
-                    retval[1] = new MapLocation[cur.pathLength];
-                    tmp = cur;
-                    for(int i = 0; i < cur.pathLength; i++, tmp = tmp.nextpath)
-                        retval[1][cur.pathLength-i-1] = tmp.loc;
+                        // Record cur (the farther encampment to us) next
+                        retval[2] = new MapLocation[cur.pathLength];
+                        tmp = cur;
+                        for(int i = 0; i < cur.pathLength; i++, tmp = tmp.nextpath) {
+                            retval[2][cur.pathLength-i-1] = new MapLocation(tmp.loc.x*searchScale+searchScale/2,
+                                                                            tmp.loc.y*searchScale+searchScale/2);
+System.out.println("\t\t(" + retval[2][cur.pathLength-i-1].x + ", " + retval[2][cur.pathLength-i-1].y + ")");
+                        }
 
-                    break;
+                        break;
+                    }
                 } else {
-                    lastEncampment = cur;
+                    // We only want to store encampments if they are closer
+                    // to the enemy encampment.
+                    dist = cur.loc.distanceSquaredTo(enemyHQ);
+                    if(dist < lastdist) {
+System.out.println("-- found an encampment at (" + (cur.loc.x*searchScale+searchScale/2) + ", " + (cur.loc.y*searchScale+searchScale/2) + ")");
+                        lastEncampment = cur;
+                        lastdist = dist;
+                        lastRotX = width-1-cur.loc.x;
+                        lastRotY = height-1-cur.loc.y;
+                    }
                 }
             }
 
-            // Now mark the map and it's rotationally symmetrical counterpart
+            // Now mark the map and its rotationally symmetrical counterpart
+            // Only mark the symmetrical part if we haven't located the
+            //  stopping point yet.
             map_costs[cur.loc.x][cur.loc.y] = cur.estimateCost;
-            map_costs[mapwidth-cur.loc.x][mapheight-cur.loc.y] = -cur.estimateCost;
+            if(!stop)
+                map_costs[width-cur.loc.x-1][height-cur.loc.y-1] = -cur.estimateCost;
 
             // Finally, add this location's neighbors to the queue
             for(int i = 0; i < DIRECTIONS.length; i++) {
                 curLoc = cur.loc.add(DIRECTIONS[i]);
 
                 // Don't expand if the new location is outside the map
-                if(curLoc.x < 0 || curLoc.x >= mapwidth || curLoc.y < 0 || curLoc.y >= mapheight)
+                if(curLoc.x < 0 || curLoc.x >= width || curLoc.y < 0 || curLoc.y >= height)
                     continue;
 
-                // Add this node to the queue.  Note that there are no
-                //  heuristics for this search.
+                // Add this node to the queue.
                 cost = cur.pathCost+map_weights[curLoc.x][curLoc.y]+1;
-                tmp = new PathNode(cost, cur.pathLength+1, cost, curLoc);
-                tmp.nextpath = cur;
-                if(path != null)
-                    path = path.enqueue(tmp);
-                else
-                    path = tmp;
+                estimate = cost;
+                if(map_costs[curLoc.x][curLoc.y] <= 0 ||
+                   map_costs[curLoc.x][curLoc.y] > cost) {
+                    // We want to expand this node only if it is the best
+                    // path found so far.
+                    if(map_nodes[curLoc.x][curLoc.y] != null) {
+                        if(map_nodes[curLoc.x][curLoc.y].estimateCost <= cost)
+                            continue;
+                        else
+                            path = path.remove(map_nodes[curLoc.x][curLoc.y]);
+                    }
+
+                    tmp = new PathNode(cost, cur.pathLength+1, cost, curLoc);
+                    map_nodes[curLoc.x][curLoc.y] = tmp;
+                    tmp.nextpath = cur;
+                    if(path != null)
+                        path = path.enqueue(tmp);
+                    else
+                        path = tmp;
+                }
             }
         }
 
         // Finally, return
+System.out.println("Expanded " + count + "  nodes before returning.");
+System.out.println("Path lengths are " + retval[1].length + " and " + retval[2].length);
         return retval;
     }
 }
