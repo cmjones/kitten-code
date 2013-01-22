@@ -69,6 +69,8 @@ public class MapModule {
                  tmp;
         int cost,
             estimate,
+            cx,
+            cy,
             minw,
             maxw,
             minh,
@@ -81,13 +83,22 @@ public class MapModule {
         // First recalculate the weights for the map and initialize the closed set.
         //  Only search in a rectangular area around the start and end location. Search
         //  a larger area when working with a larger scale, since it takes shorter.
-        minw = Math.min(start.x, end.x)-searchScale*2;
+        cx = (end.x+start.x)/2;
+        cy = (end.y+start.y)/2;
+        if((maxw = Math.abs(end.x-start.x)/2) > (maxh = Math.abs(end.y-start.y)/2)) {
+            minh = cy-maxw-searchScale;
+            maxh = cy+maxw-searchScale;
+            minw = cx-maxw-searchScale;
+            maxw = cx+maxw-searchScale;
+        } else {
+            minw = cx-maxh-searchScale;
+            maxw = cx+maxh-searchScale;
+            minh = cy-maxh-searchScale;
+            maxh = cy+maxh-searchScale;
+        }
         if(minw < 0) minw = 0;
-        maxw = Math.max(start.x, end.x)+searchScale*2;
         if(maxw >= mapwidth/searchScale) maxw = mapwidth/searchScale-1;
-        minh = Math.min(start.y, end.y)-searchScale*2;
         if(minh < 0) minh = 0;
-        maxh = Math.max(start.y, end.y)+searchScale*2;
         if(maxh >= mapheight/searchScale) maxh = mapheight/searchScale-1;
         center = new MapLocation((maxw+minw)/2, (maxh+minh)/2);
         recalc_weights(rc, center, maxw-minw+1, maxh-minh+1, searchScale);
