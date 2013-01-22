@@ -27,20 +27,23 @@ public class HQAI extends AI {
 	int gscore;
 	int fscore;    
 	Direction[] directions = new Direction[3];
+	Direction[] alldir = new Direction[8];
 	MapLocation enemyhqloc;
 	MapLocation myhqloc;
 	boolean mapmade = false;
 	int[] check_msgs = new int[1];
 	
 	
+	
  public HQAI(RobotController rc) {
 	 super(rc);
         robotCount = 0;
         enemyHQ = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+        alldir = Direction.values();
     }
 
     public HQAI(RobotController rc, HQAI oldme) {
-        super(oldme);
+        super(rc, oldme);
         robotCount = oldme.robotCount;
         enemyHQ = oldme.enemyHQ;
         internalmap = oldme.internalmap;
@@ -53,6 +56,7 @@ public class HQAI extends AI {
 	myhqloc = rc.senseHQLocation();
 	for(int i = check_msgs.length - 1; --i >= 0;){
 		check_msgs[i] = 0;
+		alldir = Direction.values();
 	}
 	}
     
@@ -99,6 +103,7 @@ public class HQAI extends AI {
 
     	int msgbuf = (data << 4) + job;
         radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
+        System.out.println("HQ sent a build message");
         Direction dir = enemyHQ;
         do{
         	if(rc.canMove(dir) &&
@@ -193,5 +198,15 @@ public class HQAI extends AI {
                 }
 		return temp;
 	}
-
+	
+	public MapLocation findencamp_nearpoint(RobotController rc, MapLocation center){
+		alldir = Direction.values();
+		for(int i = 0; i < alldir.length; i ++){
+			if(rc.senseEncampmentSquare(center.add(alldir[i])) == true){
+				return center.add(alldir[i]);
+			}
+		}
+		return null;
+	}
+	
 }

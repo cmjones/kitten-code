@@ -220,7 +220,7 @@ public class MapModule {
 int count = 0;
         while(path != null) {
 count++;
-            // Get the next location to expand
+           // Get the next location to expand
             cur = path;
             path = path.pop();
 

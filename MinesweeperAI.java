@@ -47,7 +47,7 @@ public class MinesweeperAI extends SoldierAI {
         MapLocation checkleft;
 
         if(Clock.getRoundNum()%15 == 2 && contcheck == true){
-           contcheck = hear_waypoints(rc);
+           //contcheck = hear_waypoints(rc);
         }
         
         // If we can't do anything, don't do anything

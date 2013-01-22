@@ -18,11 +18,13 @@ public class SoldierAI extends AI {
     String maskbuffer;
 
     public SoldierAI(RobotController rc) {
+    	super(rc);
         nav = new NavModule(rc);
         fight = new FightModule();
     }
 
     public SoldierAI(RobotController rc, SoldierAI oldme){
+    	super(rc, oldme);
     	nav = oldme.nav;
     	fight = oldme.fight;
     }

@@ -27,12 +27,13 @@ public class Begin1HQAI extends HQAI {
 	int close_encamps_num;
 	int build_sup_num;
 	boolean encamp_sup;
-	int curpoint_1;
-	int curpoint_2;
+	int curpoint_1 = 0;
+	int curpoint_2 = 0;
 	int totpoint_1;
 	int totpoint_2;
-	int sendmsg_2;
-	int sendmsg_1;
+	int sendmsg_2=0;
+	int sendmsg_1=0;
+	MapLocation desti;
 	
     public Begin1HQAI(RobotController rc) {
         super(rc);
@@ -41,26 +42,30 @@ public class Begin1HQAI extends HQAI {
     public Begin1HQAI(RobotController rc, HQAI oldme) {
         super(rc, oldme);
         boolean encamp_sup = false;
-        curpoint_1 = 0;
-        curpoint_2 = 0;
     }
     
     public AI act(RobotController rc) throws Exception {
+    	do_broadcast(rc);
+    	
+    	
     	if(rc.isActive()){
     		//to keep the HQ from going OMG OMG OMG KEE PDOING THINGS AHAAAHAHAHHHHHHH
     		if(!encamp_sup){
-	    		encamps_of_int = map.findEncampments(rc, 10);
+	    		encamps_of_int = map.findEncampments(rc, 10, 3);
+    			encamps_of_int[1][encamps_of_int[1].length - 1] = findencamp_nearpoint(rc, encamps_of_int[1][encamps_of_int[1].length - 1]);
+    			System.out.println(encamps_of_int[1][encamps_of_int[1].length - 1]);
+    			encamps_of_int[2][encamps_of_int[2].length - 1] = findencamp_nearpoint(rc, encamps_of_int[2][encamps_of_int[2].length - 1]);
 	    		while(encamps_of_int == null || encamps_of_int[1] == null){
 	    			rc.yield();
 	    		}
 	    		numencamps_int = 12;
-	    		totpoint_1 = encamps_of_int[1].length;
-	    		totpoint_2 = encamps_of_int[2].length;
+	    		totpoint_2 = encamps_of_int[1].length;
+	    		totpoint_1 = encamps_of_int[2].length;
 	    		//Checks to see how far away the two far encamps are from eachother.
 	    		//Depending on whether they're far or close, it builds one or two artillery--
 	    		// close = 1, far = 2.
 	    		int dist_btwn_far = encamps_of_int[1][encamps_of_int[1].length - 1].distanceSquaredTo(encamps_of_int[2][encamps_of_int[2].length - 1]);
-	    		if(Math.round(Math.sqrt(dist_btwn_far)) > 4){
+	    		if(Math.round(Math.sqrt(dist_btwn_far)) > 1){
 	    			build_art_num = 2;
 	    		} else {
 	    			build_art_num = 1;
@@ -81,6 +86,8 @@ public class Begin1HQAI extends HQAI {
 	    		encamp_sup = true;
     		}
     		
+    		
+    		
     		//Checks to see whether it's been told to build 1 or 2 artilleries. If it was told to
     		// build one, goes to the first one and builds.
     		//Else, it sends one to the farther one first and then sends one to the closer one.
@@ -90,8 +97,8 @@ public class Begin1HQAI extends HQAI {
             	msgbuf += radio.CHANNEL_WAYPOINTS_1 << 6;
             	msgbuf += AI.TOBUILD_ARTILLERY;
             	build_art_num -= 1;
-            	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
             	sendmsg_1 = 1;
+            	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     		} else if(build_art_num == 2){
     			msgbuf = 127 << 13;
                 msgbuf += radio.CHANNEL_WAYPOINTS_2 << 6;
@@ -100,42 +107,42 @@ public class Begin1HQAI extends HQAI {
             	sendmsg_2 = 1;
             	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     		} else if(build_sup_num != 0){
-    			//System.out.println(build_sup_num-1 +" " + encamps_of_int[build_sup_num-1].x + " " + encamps_of_int[build_sup_num-1].y);
-    			msgbuf = encamps_of_int[0][build_sup_num - 1].x << 13;
-    			msgbuf += encamps_of_int[0][build_sup_num-1].y << 6;
+    			desti = findencamp_nearpoint(rc, encamps_of_int[0][build_sup_num - 1]);
+    			if(desti != null){
+    			msgbuf = desti.x << 13;
+    			msgbuf += desti.y << 6;
     			msgbuf += AI.TOBUILD_SUPPLIER;
     			makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     			build_sup_num -= 1;
+    			}
     		}
     		
-    		if(Clock.getRoundNum() % 15 == 1){
-	    		if(sendmsg_2 == 1){
-	    			if(radio.read(rc, radio.CHANNEL_WAYPOINTS_2) != 1){
-	    				if(curpoint_2 < totpoint_2){
-	    					curpoint_2 += 1;
-	    				} else {
-	    					curpoint_2 = 0;
-	    				}
-	                	broadcast_waypoints(rc, encamps_of_int[1][curpoint_2], curpoint_2, totpoint_2);
-	    			} else {
-	    				sendmsg_2 = 0;
-	    			}
-	    		}
-	    		if(sendmsg_1 == 1){
-	    			if(radio.read(rc, radio.CHANNEL_WAYPOINTS_1) != 1){
-	    				if(curpoint_1 < totpoint_1){
-	    					curpoint_1 += 1;
-	    				} else {
-	    					curpoint_1 = 0;
-	    				}
-	                	broadcast_waypoints(rc, encamps_of_int[2][curpoint_1], curpoint_1, totpoint_1);
-	    			} else {
-	    				sendmsg_1 = 0;
-	    			}
-	    		}
-   		
-    		}
+
     	}
     	return this;
     }
+    
+	public void do_broadcast(RobotController rc){
+		if(sendmsg_2 == 1){
+				if(curpoint_2 < totpoint_2){
+	            	broadcast_waypoints(rc, encamps_of_int[1][curpoint_2], curpoint_2, totpoint_2, radio.CHANNEL_WAYPOINTS_2);
+	            	System.out.println(encamps_of_int[1][curpoint_2] +"" + curpoint_2 +" " + totpoint_2);
+					curpoint_2++;
+				} else {
+					sendmsg_2 = 0;
+				}
+		}
+		if(sendmsg_1 == 1){
+				if(curpoint_1 < totpoint_1){
+	            	broadcast_waypoints(rc, encamps_of_int[2][curpoint_1], curpoint_1, totpoint_1, radio.CHANNEL_WAYPOINTS_1);
+	            	System.out.println(encamps_of_int[2][curpoint_1] +"" + curpoint_1 +" " + totpoint_1);
+					curpoint_1++;
+				} else {
+					for(int i = 0; i < totpoint_1; i ++){
+						System.out.println(encamps_of_int[2][i]);
+					}
+					sendmsg_1 = 0;
+				}
+		}
+	}
 }

@@ -17,17 +17,17 @@ public class RobotPlayer {
     public static AI chooseAI(RobotController rc) {
         switch(rc.getType()) {
         case ARTILLERY:
-            return new ArtilleryAI();
+            return new ArtilleryAI(rc);
         case GENERATOR:
-            return new GeneratorAI();
+            return new GeneratorAI(rc);
         case HQ:
             return new HQAI(rc);
         case MEDBAY:
-            return new MedbayAI();
+            return new MedbayAI(rc);
         case SHIELDS:
-            return new ShieldsAI();
+            return new ShieldsAI(rc);
         case SUPPLIER:
-            return new SupplierAI();
+            return new SupplierAI(rc);
         case SOLDIER:
             return new SoldierAI(rc);
         }

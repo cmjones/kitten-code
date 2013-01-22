@@ -29,7 +29,8 @@ public class ArtilleryAI extends AI {
     boolean clear;
 
 
-    public ArtilleryAI() {
+    public ArtilleryAI(RobotController rc) {
+    	super(rc);
         // Set the radius of locations to check to be slightly
         // higher than the attack radius of Artillery.  This allows
         // the unit to judge splash damage.

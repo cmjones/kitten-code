@@ -33,21 +33,16 @@ public abstract class AI {
 
     protected RadioModule radio;
     protected MapModule map;
-
-    public AI() {
-        radio = new RadioModule();
-    }
     
     public AI(RobotController rc){
     	radio = new RadioModule();
     	map = new MapModule(rc);
     }
 
-    public AI(AI oldme) {
+    public AI(RobotController rc,AI oldme) {
         radio = oldme.radio;
-        if(oldme.map != null){
-        	map = oldme.map;
-        }
+        map = oldme.map;
+        
     }
 
     public void do_upkeep(RobotController rc){
@@ -57,25 +52,25 @@ public abstract class AI {
 
     abstract public AI act(RobotController rc) throws Exception;
     
-    public void broadcast_waypoints(RobotController rc, MapLocation waypoints, int curpoint, int totpoint){
+    public void broadcast_waypoints(RobotController rc, MapLocation waypoints, int curpoint, int totpoint, int channel_inp){
 
     	//Format:
-    	// 00 0000000 0000000 0000 0000
-    	// * |   x   |   y   |cur |tot
+    	// 0000000 0000000 00000 00000
+    	//    x   |   y   | cur |tot
     	// * = marker to tell that the findpathAI that yes, this is its own message.
     		int msgbuf = 0;
     		//msgbuf = 1 << 23;
     		//System.out.print("1");
-    		msgbuf = waypoints.x << 15;
+    		msgbuf = waypoints.x << 17;
     		//System.out.print(" " + waypoints[curpoint].x);
-    		msgbuf += waypoints.y << 8;
+    		msgbuf += waypoints.y << 10;
     		//System.out.print(" " + waypoints[curpoint].y);
-    		msgbuf += curpoint << 4;
+    		msgbuf += curpoint << 5;
     		//System.out.print(" " + curpoint +"\n");
     		msgbuf += totpoint;
     		//System.out.println(curpoint + " " + totpoint);
     		//System.out.println(((msgbuf>>>15)) +" " + ((msgbuf>>>8)&0x7F) + " " + ((msgbuf>>>4)&0xF));
-    		radio.write(rc, radio.CHANNEL_PATH_ENCAMP, msgbuf);
+    		radio.write(rc, channel_inp, msgbuf);
     		
     }
     
@@ -83,18 +78,22 @@ public abstract class AI {
     public boolean hear_waypoints(RobotController rc, int channel){
     	
     		//System.out.println("I fired");
-    		int message = radio.read(rc, channel);
+    		int message = radio.readTransient(rc, channel);
+    		System.out.println(((message >>> 5)&0x1F) + " " + ((message >>> 17)&0x7F) + " " + ((message >>> 10)&0x7F));
     		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
-    		if(message != 0 && message != 1 << 22){
+    		if(message != 0){ //&& message != 1 << 22){
 	    		if(waypoint_heard == null){
-	    			waypoint_heard = new MapLocation[message&0xF];
+	    			waypoint_heard = new MapLocation[message&0x1F];
+		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);
+		    		num_heard += 1;
+		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 5)&0x1F].x + " " + waypoint_heard[(message >>> 5)&0x1F].y);
 	    		} else if(num_heard == waypoint_heard.length){
 	    			sendconfo = 1;
 	    			return false;
-	    		}else if(waypoint_heard[(message >>> 4)&0xF] == null){
-		    		waypoint_heard[(message >>> 4)&0xF] = new MapLocation((message >>> 15)&0x7F, (message >>> 8)&0x7F);
+	    		}else if(waypoint_heard[(message >>> 5)&0x1F] == null){
+		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);
 		    		num_heard += 1;
-		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 4)&0xF].x + " " + waypoint_heard[(message >>> 4)&0xF].y);
+		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 5)&0x1F].x + " " + waypoint_heard[(message >>> 5)&0x1F].y);
 		    	}
 		    	return true;
     		

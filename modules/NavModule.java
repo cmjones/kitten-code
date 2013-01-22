@@ -107,7 +107,7 @@ public class NavModule {
     //
     // Navigates to within 'distance' squared units away from each waypoint
     private MapLocation getDest(MapLocation cur, int distance) {
-        if(curWaypoint < waypoints.length) {
+        if(waypoints != null && curWaypoint < waypoints.length) {
             // Check if we still need to navigate to the waypoint
             if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
                 return waypoints[curWaypoint];
