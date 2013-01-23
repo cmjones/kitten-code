@@ -1,8 +1,10 @@
 package team197;
 
-import battlecode.common.RobotController;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.Team;
+
 import team197.modules.RadioModule;
 import team197.modules.NavModule;
 import team197.modules.FightModule;
@@ -47,5 +49,28 @@ public class SoldierAI extends AI {
         } else {
         	return new FighterAI(rc, this);
         }
+    }
+
+    /** Handy method that diffuses mines as the robot moves.
+     * Robot tries to move in the given direction (not moving if passed
+     *  Direction.NONE or Direction.OMNI).  If the direction takes it
+     *  into a mine, the robot first diffuses the mine.
+     *
+     * Assumes that the robot is currently free to act.
+     */
+    public void moveSafe(RobotController rc, Direction d) throws Exception {
+        MapLocation target;
+        Team t;
+
+        if(d == Direction.NONE || d == Direction.OMNI)
+            return;
+
+        // If there's a mine, defuse it
+        target = rc.getLocation().add(d);
+        t = rc.senseMine(target);
+        if(t != null && t != rc.getTeam())
+            rc.defuseMine(target);
+        else
+            rc.move(d);
     }
 }
