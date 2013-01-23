@@ -43,7 +43,6 @@ public class NavModule {
     public NavModule(RobotController rc) {
         mapWidth = rc.getMapWidth();
         mapHeight = rc.getMapHeight();
-        curWaypoint = -1;
     }
 
     /** Sets the current destination of this robot.
@@ -53,8 +52,7 @@ public class NavModule {
     public void setDestination(RobotController rc, MapLocation ml) {
         // Set the destination
         destination = ml;
-        waypoints = new MapLocation[0];
-        curWaypoint = 0;
+        waypoints = null;
     }
 
     /** Sets the current destination of this robot.
@@ -69,13 +67,15 @@ public class NavModule {
     public void setDestination(RobotController rc, MapLocation ml, MapLocation[] waypoints) {
         MapLocation cur;
         int lastDist,
+            lastWaypoint,
             curDist;
 
         destination = ml;
         this.waypoints = waypoints;
 
         // If the last waypoint is the destination, set it to null.
-        if(waypoints[waypoints.length-1] == ml)
+        if(waypoints[waypoints.length-1] != null &&
+           waypoints[waypoints.length-1].equals(ml))
             waypoints[waypoints.length-1] = null;
 
         // Grab the robot's current location
@@ -84,7 +84,9 @@ public class NavModule {
         // Search through the array and find the 'closest' waypoint.
         //  'closest' means the first waypoint for which the next
         //  waypoint is further away.
+        lastWaypoint = 0;
         lastDist = 1000000;
+System.out.println(" -- setDest: looking for the next waypoint");
         for(curWaypoint = 0; curWaypoint < waypoints.length; curWaypoint++) {
             // Skip empty waypoints
             if(waypoints[curWaypoint] == null) continue;
@@ -93,12 +95,21 @@ public class NavModule {
             //  distance, we've found the first waypoint to navigate to.
             curDist = cur.distanceSquaredTo(waypoints[curWaypoint]);
             if(curDist > lastDist) {
-                curWaypoint--;
+                curWaypoint = lastWaypoint;
                 break;
             } else {
                 lastDist = curDist;
+                lastWaypoint = curWaypoint;
             }
         }
+
+System.out.println(" --          ended up with " + curWaypoint + " out of " + waypoints.length);
+        // If we haven't found a valid waypoint, chuck the array
+        if(curWaypoint == waypoints.length) {
+            waypoints = null;
+System.out.println(" --          waypoints should be null!");
+        }
+System.out.println(" --          waypoints == null? " + (waypoints == null));
     }
 
     // Helper function to grab the current point to navigate to.  Also handles
@@ -107,8 +118,10 @@ public class NavModule {
     //
     // Navigates to within 'distance' squared units away from each waypoint
     private MapLocation getDest(MapLocation cur, int distance) {
-        if(waypoints != null && curWaypoint < waypoints.length) {
+System.out.println(" -- waypoints == null at getDest? " + (waypoints == null));
+        if(waypoints != null && curWaypoint >= waypoints.length) {
             // Check if we still need to navigate to the waypoint
+System.out.println(" -- getDest: current waypoint = " + curWaypoint + " out of " + waypoints.length);
             if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
                 return waypoints[curWaypoint];
 
@@ -116,11 +129,16 @@ public class NavModule {
             path = null;
 
             // Loop through the waypoint array to get the next non-null waypoint
-            for(curWaypoint++; curWaypoint < waypoints.length && waypoints[curWaypoint] == null; curWaypoint++);
+System.out.println(" --          Finding the next waypoint, length = " + waypoints.length);
+            curWaypoint++;
+            for(; curWaypoint < waypoints.length && waypoints[curWaypoint] == null; curWaypoint++);
+System.out.println(" --          Found " + curWaypoint);
 
             // If we still have waypoints left, navigate to the next one.
             if(curWaypoint < waypoints.length)
                 return waypoints[curWaypoint];
+            else
+                waypoints = null;
         }
 
         // Check our location against the destination.
@@ -238,8 +256,11 @@ public class NavModule {
 
     /** Moves to the destination using an A* algorithm.
      * This function is meant to be used only in conjunction with
-     * waypoints.  Only a portion of the map is searched for a path, so
-     * closer waypoints means a faster search.
+     *  waypoints.  Only a portion of the map is searched for a path, so
+     *  closer waypoints means a faster search.
+     *
+     * The algorithm saves time by only navigating to within one square
+     *  of the way-point.
      */
     public Direction moveAStar(RobotController rc, MapModule mm) throws GameActionException {
         MapLocation cur,
@@ -249,21 +270,44 @@ public class NavModule {
         cur = rc.getLocation();
 
         // If we don't have a path to the next waypoint, recalculated it.
-        //  Also check if we've reached the end of the current path
-        if(path == null || cur.equals(path[path.length-1])) {
+        if(path == null) {
             // Naviagete towards the next waypoint/destination
             target = getDest(cur, 2);
             if(target == null) return Direction.OMNI;
 
             // Recalculate the path using the map module's a* algorithm
             path = mm.findPath(rc, cur, target, 1);
+
+            // If there's only one step in the path, just move there
+            if(path.length == 1) {
+                target = path[0];
+                path = null;
+                return findMove(rc, cur.directionTo(target));
+            }
+
+            // Otherwise, work through the path
             curPathpoint = 0;
         }
 
-        // If we're at the current path point, go to the next one.
-        if(cur.equals(path[curPathpoint])) curPathpoint++;
+        // Check to see if we've reached the next point in the path
+System.out.println(" -- Current path point = " + curPathpoint + ", length = " + path.length);
+        if(cur.equals(path[curPathpoint])) {
+            // Move on to the next waypoint
+            curPathpoint++;
+System.out.println(" --- path point = " + curPathpoint + ", length = " + path.length);
+            target = path[curPathpoint];
+            if(curPathpoint == path.length-2) {
+                if(!path[path.length-1].equals(destination))
+                    path = null;
+            } else if(curPathpoint == path.length-1) {
+                path = null;
+            }
+        } else {
+            target = path[curPathpoint];
+        }
 
+System.out.println(" -- Moving towards point (" + target.x + ", " + target.y + ")");
         // Now navigate towards the current path point.
-        return findMove(rc, cur.directionTo(path[curPathpoint]));
+        return findMove(rc, cur.directionTo(target));
     }
 }
