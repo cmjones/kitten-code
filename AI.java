@@ -42,7 +42,7 @@ public abstract class AI {
     public AI(RobotController rc,AI oldme) {
         radio = oldme.radio;
         map = oldme.map;
-        
+        num_heard = 0;
     }
 
     public void do_upkeep(RobotController rc){
@@ -79,9 +79,9 @@ public abstract class AI {
     	
     		//System.out.println("I fired");
     		int message = radio.readTransient(rc, channel);
-    		System.out.println(((message >>> 5)&0x1F) + " " + ((message >>> 17)&0x7F) + " " + ((message >>> 10)&0x7F));
+    		//System.out.println(((message >>> 5)&0x1F) + " " + ((message >>> 17)&0x7F) + " " + ((message >>> 10)&0x7F));
     		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
-    		if(message != 0){ //&& message != 1 << 22){
+    		if(message != 0 && message >>> 17 != 0){ //&& message != 1 << 22){
 	    		if(waypoint_heard == null){
 	    			waypoint_heard = new MapLocation[message&0x1F];
 		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);

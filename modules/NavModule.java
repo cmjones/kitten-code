@@ -72,7 +72,7 @@ public class NavModule {
 
         destination = ml;
         this.waypoints = waypoints;
-
+        System.out.println("******************" + ml);
         // If the last waypoint is the destination, set it to null.
         if(waypoints[waypoints.length-1] != null &&
            waypoints[waypoints.length-1].equals(ml))
@@ -140,7 +140,6 @@ System.out.println(" --          Found " + curWaypoint);
             else
                 waypoints = null;
         }
-
         // Check our location against the destination.
         if(cur.equals(destination)) {
             // We've reached our destination!
@@ -180,7 +179,7 @@ System.out.println(" --          Found " + curWaypoint);
 
         // Grab the robot's current location and the current target
         cur = rc.getLocation();
-        target = getDest(cur, 2);
+        target = getDest(cur, 0);
 
         // Check to see if we've arrived yet
         if(target == null)

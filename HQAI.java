@@ -80,9 +80,9 @@ public class HQAI extends AI {
          if(Clock.getRoundNum()%15 == 1){
             robotCount = radio.read(rc, RadioModule.CHANNEL_CHECKIN);
             	for(int i = check_msgs.length - 1; i >= 0; i --){
-	        	 if(check_msgs[i] != 0){
-	        		 if(radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP) >>> 22 == 1){
-	        			 check_msgs[i] = 0;
+	        	 if(check_msgs[i] != 1){
+	        		 if(((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP) == 1 || ((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP))&0x7F) != 0 ))){
+	        			 check_msgs[i] = 1;
 	        			 System.out.println("Heeey!");
 	        		 } else {
 	        			 radio.write(rc, RadioModule.CHANNEL_PATH_ENCAMP, check_msgs[i]);
@@ -117,8 +117,8 @@ public class HQAI extends AI {
     
 
     public void requestPath(RobotController rc, MapLocation desti){
-    	int buf = desti.x << 7;
-    	buf += desti.y;
+    	int buf = desti.x << 14;
+    	buf += desti.y << 7;
     	radio.write(rc, RadioModule.CHANNEL_PATH_ENCAMP, buf);
     	check_msgs[0] = buf;
     }

@@ -53,7 +53,7 @@ public class BuilderAI extends SoldierAI {
 	        	nav.setDestination(rc, waypoint_heard[num_heard - 1], waypoint_heard);
 	        	d = nav.moveSimple(rc);
 	        	if(d != Direction.NONE){
-	        		rc.move(d);
+	        		moveSafe(rc,d);
 	        	}
             	rc.yield();
         	} while (num_heard != waypoint_heard.length);
@@ -61,7 +61,9 @@ public class BuilderAI extends SoldierAI {
         	// Set destination one last time
         	//nav.setDestination(rc, waypoint_heard[waypoint_heard.length], waypoint_heard);
         	d = nav.moveSimple(rc);
-        	rc.move(d);
+        	if(d != Direction.NONE){
+        		moveSafe(rc,d);
+        	}
         	rc.yield();
         }
 //        if((waypoint_heard == null || num_heard != waypoint_heard.length)){

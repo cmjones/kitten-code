@@ -47,7 +47,7 @@ public class SoldierAI extends AI {
         } else if(jobget == AI.JOB_BUILDER){
         	return new BuilderAI(rc, this, dataget);
         } else {
-        	return new FighterAI(rc, this);
+        	return new FighterAI(rc, this, dataget);
         }
     }
 

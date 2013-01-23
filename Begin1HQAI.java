@@ -34,6 +34,7 @@ public class Begin1HQAI extends HQAI {
 	int sendmsg_2=0;
 	int sendmsg_1=0;
 	MapLocation desti;
+	MapLocation medbayloc;
 	
     public Begin1HQAI(RobotController rc) {
         super(rc);
@@ -58,6 +59,7 @@ public class Begin1HQAI extends HQAI {
 	    		while(encamps_of_int == null || encamps_of_int[1] == null){
 	    			rc.yield();
 	    		}
+	    		medbayloc = rc.senseEncampmentSquares(encamps_of_int[1][encamps_of_int[1].length - 1], 9, Team.NEUTRAL)[0];
 	    		numencamps_int = 12;
 	    		totpoint_2 = encamps_of_int[1].length;
 	    		totpoint_1 = encamps_of_int[2].length;
@@ -115,8 +117,17 @@ public class Begin1HQAI extends HQAI {
     			makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     			build_sup_num -= 1;
     			}
+    		} else if(medbayloc != null){
+    			msgbuf = medbayloc.x << 13;
+    			msgbuf += medbayloc.y << 6;
+    			msgbuf += AI.TOBUILD_MEDBAY;
+    			makeRobot(rc,msgbuf, AI.JOB_BUILDER);
+    			medbayloc = null;
     		}
-    		
+    		System.out.println("h");
+    		if(build_sup_num == 0 && build_art_num == 0 && medbayloc == null){
+    			return new SwarmHQAI(rc, this);
+    		}
 
     	}
     	return this;

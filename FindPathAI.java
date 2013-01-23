@@ -27,35 +27,37 @@ public class FindPathAI extends AI {
 
 
     public FindPathAI(RobotController rc){
-        super();
+        super(rc);
         map = new MapModule(rc);
         message_sent = 1;
     }
 
     public AI act(RobotController rc) throws Exception {
+        if(waypoints != null){
+        	broadcast_waypoints(rc, waypoints[curpoint], curpoint, totpoint,radio.CHANNEL_PATH_ENCAMP);
+        	if(curpoint < totpoint - 1){
+        		curpoint += 1;
+        	} else {
+        		curpoint = 0;
+        	}
+        }
         if(Clock.getRoundNum()%15 == 1){
             channelcheck = radio.readTransient(rc, radio.CHANNEL_PATH_ENCAMP);
             //System.out.println(channelcheck >>> 22);
-            if( channelcheck != 0){
+            if( channelcheck != 0 && waypoints == null){
             	curpoint = 0;
             	//map.shortpath(rc);
                 System.out.println("Starting.");
                 destination = new MapLocation(channelcheck >>> 7, channelcheck&0x1);
                 message_sent = 0;
-                waypoints = map.make_path(rc, rc.senseHQLocation(), destination);
+                waypoints = map.findPath(rc, rc.senseHQLocation(), destination,3);
                 totpoint = waypoints.length;
                 System.out.println("Finished!");
-            } else if(channelcheck == 0 && waypoints != null && waypoints[0] != null){
-           	broadcast_waypoints(rc, waypoints[curpoint], curpoint, totpoint);
-            	if(curpoint < totpoint - 1){
-            		curpoint += 1;
-            	} else {
-            		curpoint = 0;
-            	}
             }
         }
+
         if(Clock.getRoundNum()%15 == 0 && message_sent == 0){
-                radio.write(rc, radio.CHANNEL_PATH_ENCAMP, 1 << 22);
+                radio.write(rc, radio.CHANNEL_PATH_ENCAMP, 1);
                 message_sent = 1;
         }
 
