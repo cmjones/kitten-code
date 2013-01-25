@@ -23,6 +23,7 @@ public class FighterAI extends SoldierAI {
     public FighterAI(RobotController rc, SoldierAI oldme, int channel){
     	super(rc, oldme);
        // nav.setDestination(rc, rc.senseEnemyHQLocation());
+    	System.out.println(channel);
         channel_listen = channel;
     }
 
@@ -39,7 +40,7 @@ public class FighterAI extends SoldierAI {
         	do {
         		hear_waypoints(rc, channel_listen);
     			System.out.println("new desti set");
-	        	nav.setDestination(rc, waypoint_heard[num_heard - 1], waypoint_heard);
+	        	nav.setDestination(rc, rc.senseEnemyHQLocation(), waypoint_heard);
 	        	d = nav.moveSimple(rc);
 	        	moveSafe(rc, d);
             	rc.yield();
@@ -56,7 +57,7 @@ public class FighterAI extends SoldierAI {
 
         // If there are enemies to fight, fight! Otherwise,
         // continue towards the enemy base
-
+        if(rc.isActive()){
         if(d != Direction.NONE && d != Direction.OMNI) {
             // If there's a mine, defuse it
             target = rc.getLocation().add(d);
@@ -65,7 +66,7 @@ public class FighterAI extends SoldierAI {
             else
                 moveSafe(rc, d);
         }
-
+        }
         // Keep the same ai for next round
         return this;
     }
