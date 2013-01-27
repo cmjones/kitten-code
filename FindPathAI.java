@@ -36,6 +36,7 @@ public class FindPathAI extends AI {
     public AI act(RobotController rc) throws Exception {
         if(waypoints != null){
         	broadcast_waypoints(rc, waypoints[curpoint], curpoint, totpoint,radio.CHANNEL_PATH_ENCAMP);
+        	System.out.println(waypoints[curpoint]);
         	if(curpoint < totpoint - 1){
         		curpoint += 1;
         	} else {
@@ -49,7 +50,7 @@ public class FindPathAI extends AI {
             	curpoint = 0;
             	//map.shortpath(rc);
                 System.out.println("Starting.");
-                destination = new MapLocation(channelcheck >>> 7, channelcheck&0x1);
+               destination = new MapLocation(channelcheck >>> 13, (channelcheck >>> 6)&0x7F);
                 message_sent = 0;
                 waypoints = map.findPath(rc, rc.senseHQLocation(), destination,3);
                 totpoint = waypoints.length;

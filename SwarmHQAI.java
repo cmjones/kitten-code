@@ -29,12 +29,12 @@ public class SwarmHQAI extends HQAI {
 		 }
 
 		 
-//		 if(rc.isActive()){
-//			 if(check_msgs[0] == 1){
-//				 msgbuf = RadioModule.CHANNEL_PATH_ENCAMP;
-//	    		 makeRobot(rc, msgbuf, AI.JOB_STANDARD);
-//			 }
-//		 }
+		 if(rc.isActive()){
+			 if(check_msgs[0] == 1){
+				 msgbuf = RadioModule.CHANNEL_PATH_ENCAMP;
+	    		 makeRobot(rc, msgbuf, AI.JOB_STANDARD);
+			 }
+		 }
 		 
 		 return this;
 	 }

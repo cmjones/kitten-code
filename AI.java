@@ -84,6 +84,7 @@ public abstract class AI {
     		if(message != 0 && message >>> 17 != 0){ //&& message != 1 << 22){
 	    		if(waypoint_heard == null){
 	    			waypoint_heard = new MapLocation[message&0x1F];
+	    			System.out.println(waypoint_heard.length);
 		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);
 		    		num_heard += 1;
 		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 5)&0x1F].x + " " + waypoint_heard[(message >>> 5)&0x1F].y);

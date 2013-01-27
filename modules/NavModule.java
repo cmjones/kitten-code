@@ -72,7 +72,7 @@ public class NavModule {
 
         destination = ml;
         this.waypoints = waypoints;
-        System.out.println("******************" + ml);
+        //System.out.println("******************" + ml);
         // If the last waypoint is the destination, set it to null.
         if(waypoints[waypoints.length-1] != null &&
            waypoints[waypoints.length-1].equals(ml))
@@ -86,7 +86,7 @@ public class NavModule {
         //  waypoint is further away.
         lastWaypoint = 0;
         lastDist = 1000000;
-System.out.println(" -- setDest: looking for the next waypoint");
+//.out.println(" -- setDest: looking for the next waypoint");
         for(curWaypoint = 0; curWaypoint < waypoints.length; curWaypoint++) {
             // Skip empty waypoints
             if(waypoints[curWaypoint] == null) continue;
@@ -103,13 +103,13 @@ System.out.println(" -- setDest: looking for the next waypoint");
             }
         }
 
-System.out.println(" --          ended up with " + curWaypoint + " out of " + waypoints.length);
+//System.out.println(" --          ended up with " + curWaypoint + " out of " + waypoints.length);
         // If we haven't found a valid waypoint, chuck the array
         if(curWaypoint == waypoints.length) {
             waypoints = null;
-System.out.println(" --          waypoints should be null!");
+//System.out.println(" --          waypoints should be null!");
         }
-System.out.println(" --          waypoints == null? " + (waypoints == null));
+//System.out.println(" --          waypoints == null? " + (waypoints == null));
     }
 
     // Helper function to grab the current point to navigate to.  Also handles
@@ -118,10 +118,10 @@ System.out.println(" --          waypoints == null? " + (waypoints == null));
     //
     // Navigates to within 'distance' squared units away from each waypoint
     private MapLocation getDest(MapLocation cur, int distance) {
-System.out.println(" -- waypoints == null at getDest? " + (waypoints == null));
+//System.out.println(" -- waypoints == null at getDest? " + (waypoints == null));
         if(waypoints != null && curWaypoint >= waypoints.length) {
             // Check if we still need to navigate to the waypoint
-System.out.println(" -- getDest: current waypoint = " + curWaypoint + " out of " + waypoints.length);
+//System.out.println(" -- getDest: current waypoint = " + curWaypoint + " out of " + waypoints.length);
             if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
                 return waypoints[curWaypoint];
 
@@ -129,10 +129,10 @@ System.out.println(" -- getDest: current waypoint = " + curWaypoint + " out of "
             path = null;
 
             // Loop through the waypoint array to get the next non-null waypoint
-System.out.println(" --          Finding the next waypoint, length = " + waypoints.length);
+//System.out.println(" --          Finding the next waypoint, length = " + waypoints.length);
             curWaypoint++;
             for(; curWaypoint < waypoints.length && waypoints[curWaypoint] == null; curWaypoint++);
-System.out.println(" --          Found " + curWaypoint);
+//System.out.println(" --          Found " + curWaypoint);
 
             // If we still have waypoints left, navigate to the next one.
             if(curWaypoint < waypoints.length)
