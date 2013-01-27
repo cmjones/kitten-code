@@ -61,8 +61,8 @@ public class Begin1HQAI extends HQAI {
 	    		}
 	    		medbayloc = rc.senseEncampmentSquares(encamps_of_int[1][encamps_of_int[1].length - 1], 9, Team.NEUTRAL)[0];
 	    		numencamps_int = 12;
-	    		totpoint_2 = encamps_of_int[1].length;
-	    		totpoint_1 = encamps_of_int[2].length;
+	    		totpoint_1 = encamps_of_int[1].length;
+	    		totpoint_2 = encamps_of_int[2].length;
 	    		//Checks to see how far away the two far encamps are from eachother.
 	    		//Depending on whether they're far or close, it builds one or two artillery--
 	    		// close = 1, far = 2.
@@ -95,19 +95,19 @@ public class Begin1HQAI extends HQAI {
     		//Else, it sends one to the farther one first and then sends one to the closer one.
     		//System.out.println(build_art_num);
     		if(build_art_num == 1){
-    			msgbuf = 127 << 13;
-            	msgbuf += radio.CHANNEL_WAYPOINTS_1 << 6;
-            	msgbuf += AI.TOBUILD_ARTILLERY;
-            	build_art_num -= 1;
-            	sendmsg_1 = 1;
-            	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+                    msgbuf = 127 << 13;
+                    msgbuf += radio.CHANNEL_WAYPOINTS_1 << 6;
+                    msgbuf += AI.TOBUILD_ARTILLERY;
+                    build_art_num -= 1;
+                    sendmsg_1 = 1;
+                    makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     		} else if(build_art_num == 2){
-    			msgbuf = 127 << 13;
-                msgbuf += radio.CHANNEL_WAYPOINTS_2 << 6;
-            	msgbuf += AI.TOBUILD_ARTILLERY;
-            	build_art_num -= 1;
-            	sendmsg_2 = 1;
-            	makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+                    msgbuf = 127 << 13;
+                    msgbuf += radio.CHANNEL_WAYPOINTS_2 << 6;
+                    msgbuf += AI.TOBUILD_ARTILLERY;
+                    build_art_num -= 1;
+                    sendmsg_2 = 1;
+                    makeRobot(rc, msgbuf, AI.JOB_BUILDER);
     		} else if(build_sup_num != 0){
     			desti = findencamp_nearpoint(rc, encamps_of_int[0][build_sup_num - 1]);
     			if(desti != null){
@@ -136,8 +136,8 @@ public class Begin1HQAI extends HQAI {
 	public void do_broadcast(RobotController rc){
 		if(sendmsg_2 == 1){
 				if(curpoint_2 < totpoint_2){
-	            	broadcast_waypoints(rc, encamps_of_int[1][curpoint_2], curpoint_2, totpoint_2, radio.CHANNEL_WAYPOINTS_2);
-	            	System.out.println(encamps_of_int[1][curpoint_2] +"" + curpoint_2 +" " + totpoint_2);
+	            	broadcast_waypoints(rc, encamps_of_int[2][curpoint_2], curpoint_2, totpoint_2, radio.CHANNEL_WAYPOINTS_2);
+	            	System.out.println(encamps_of_int[2][curpoint_2] +"" + curpoint_2 +" " + totpoint_2);
 					curpoint_2++;
 				} else {
 					sendmsg_2 = 0;
@@ -145,12 +145,12 @@ public class Begin1HQAI extends HQAI {
 		}
 		if(sendmsg_1 == 1){
 				if(curpoint_1 < totpoint_1){
-	            	broadcast_waypoints(rc, encamps_of_int[2][curpoint_1], curpoint_1, totpoint_1, radio.CHANNEL_WAYPOINTS_1);
-	            	System.out.println(encamps_of_int[2][curpoint_1] +"" + curpoint_1 +" " + totpoint_1);
+	            	broadcast_waypoints(rc, encamps_of_int[1][curpoint_1], curpoint_1, totpoint_1, radio.CHANNEL_WAYPOINTS_1);
+	            	System.out.println(encamps_of_int[1][curpoint_1] +"" + curpoint_1 +" " + totpoint_1);
 					curpoint_1++;
 				} else {
 					for(int i = 0; i < totpoint_1; i ++){
-						System.out.println(encamps_of_int[2][i]);
+						System.out.println(encamps_of_int[1][i]);
 					}
 					sendmsg_1 = 0;
 				}

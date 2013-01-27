@@ -44,27 +44,16 @@ public class FighterAI extends SoldierAI {
 	        	moveSafe(rc, d);
             	rc.yield();
         	} while (num_heard != waypoint_heard.length);
-        	
+
         	// Set destination one last time
         	//nav.setDestination(rc, waypoint_heard[waypoint_heard.length], waypoint_heard);
         	d = nav.moveSimple(rc);
         	moveSafe(rc, d);
         	rc.yield();
         }
-        
-        // If we can't do anything, don't do anything
 
-        // If there are enemies to fight, fight! Otherwise,
-        // continue towards the enemy base
-
-        if(d != Direction.NONE && d != Direction.OMNI) {
-            // If there's a mine, defuse it
-            target = rc.getLocation().add(d);
-            if(rc.senseMine(target) != null && rc.senseMine(target) != rc.getTeam())
-                rc.defuseMine(target);
-            else
-                moveSafe(rc, d);
-        }
+        // Now move safely
+        moveSafe(rc, d);
 
         // Keep the same ai for next round
         return this;
