@@ -23,13 +23,15 @@ public abstract class AI {
                             JOB_MINESWEEPER_L = 2,
                             JOB_MINESWEEPER_M = 3,
                             JOB_MINESWEEPER_R = 4,
-                            JOB_BUILDER = 5;
+                            JOB_PANIC = 5,
+                            JOB_SCOUT = 6,
+                            JOB_BUILDER = 7;
 
     public static final int TOBUILD_GENERATOR = 1,
-    		                TOBUILD_ARTILLERY = 2,
-    		                TOBUILD_MEDBAY = 3,
-    		                TOBUILD_SHIELDS = 4,
-    		                TOBUILD_SUPPLIER = 5;
+                            TOBUILD_ARTILLERY = 2,
+                            TOBUILD_MEDBAY = 3,
+                            TOBUILD_SHIELDS = 4,
+                            TOBUILD_SUPPLIER = 5;
 
     protected RadioModule radio;
     protected MapModule map;
@@ -73,32 +75,54 @@ public abstract class AI {
     		radio.write(rc, channel_inp, msgbuf);
     		
     }
-    
-    
+
+
     public boolean hear_waypoints(RobotController rc, int channel){
-    	
-    		//System.out.println("I fired");
-    		int message = radio.readTransient(rc, channel);
-    		//System.out.println(((message >>> 5)&0x1F) + " " + ((message >>> 17)&0x7F) + " " + ((message >>> 10)&0x7F));
-    		//System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
-    		if(message != 0 && message >>> 17 != 0){ //&& message != 1 << 22){
-	    		if(waypoint_heard == null){
-	    			waypoint_heard = new MapLocation[message&0x1F];
-	    			System.out.println(waypoint_heard.length);
-		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);
-		    		num_heard += 1;
-		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 5)&0x1F].x + " " + waypoint_heard[(message >>> 5)&0x1F].y);
-	    		} else if(num_heard == waypoint_heard.length){
-	    			sendconfo = 1;
-	    			return false;
-	    		}else if(waypoint_heard[(message >>> 5)&0x1F] == null){
-		    		waypoint_heard[(message >>> 5)&0x1F] = new MapLocation((message >>> 17)&0x7F, (message >>> 10)&0x7F);
-		    		num_heard += 1;
-		    		System.out.println("I just got the point " + waypoint_heard[(message >>> 5)&0x1F].x + " " + waypoint_heard[(message >>> 5)&0x1F].y);
-		    	}
-		    	return true;
-    		
-    		}
-    		return true;
+        int message,
+            tot,
+            cur,
+            x,
+            y;
+        System.out.println("++++++++++++++++++++++++++++++++++++++++++++");
+
+        // Grab the next message.  If it is zero, something was corrupted
+        if((message = radio.readTransient(rc, channel)) == 0)
+            return waypoint_heard != null && num_heard == waypoint_heard.length;
+
+        // Decode the message
+        tot = message&0x1F;
+        message = message >>> 5;
+        cur = message&0x1F;
+        message = message >>> 5;
+        y = message&0x7F;
+        message = message >>> 7;
+        x = message&0x7F;
+
+        System.out.println("Message heard: " + cur + "/" + tot + " (" + x + ", " + y + ")");
+        //System.out.println( (radio.read(rc, radio.CHANNEL_PATH_ENCAMP) >>> 15)&0x7F)
+        if(x != 0) {
+            // Check if we don't know about this path yet
+            if(waypoint_heard == null || tot != waypoint_heard.length){
+                waypoint_heard = new MapLocation[tot];
+                num_heard = 0;
+                System.out.println("Hearing a new set of waypoints, length = " + waypoint_heard.length);
+            }
+
+            // Store the new waypoint if we haven't heard it yet
+            if(waypoint_heard[cur] == null) {
+                waypoint_heard[cur] = new MapLocation(x, y);
+                num_heard += 1;
+                System.out.println("I just got the point " + waypoint_heard[cur] + ": (total heard = " + num_heard + ")");
+            }
+
+            // Check if we've heard all of the waypoints
+            if(num_heard == waypoint_heard.length){
+                sendconfo = 1;
+                return false;
+            }
+        }
+
+        // Still more waypoints to hear
+        return true;
     }
 }

@@ -34,20 +34,25 @@ public class SoldierAI extends AI {
     public AI act(RobotController rc) throws Exception {
         Direction d;
         MapLocation target;
-        int msgget = radio.readTransient(rc, RadioModule.CHANNEL_GETJOB);        
+        int msgget = radio.readTransient(rc, RadioModule.CHANNEL_GETJOB);
         int jobget = msgget&0xF;
         int dataget = msgget >>> 4;
-        
-        if(jobget == AI.JOB_MINESWEEPER_L){
-        	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_L);
-        } else if(jobget == AI.JOB_MINESWEEPER_M){
-        	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_M);
-        } else if(jobget == AI.JOB_MINESWEEPER_R){
-        	return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_R);
-        } else if(jobget == AI.JOB_BUILDER){
-        	return new BuilderAI(rc, this, dataget);
-        } else {
-        	return new FighterAI(rc, this, dataget);
+
+        switch(jobget) {
+        case JOB_MINESWEEPER_L:
+            return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_L);
+        case JOB_MINESWEEPER_M:
+            return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_M);
+        case JOB_MINESWEEPER_R:
+            return new MinesweeperAI(rc, this, AI.JOB_MINESWEEPER_R);
+        case JOB_BUILDER:
+            return new BuilderAI(rc, this, dataget);
+        case JOB_PANIC:
+            return new PanicSoldierAI(rc, this);
+        case JOB_SCOUT:
+            return new ScoutAI(rc, this);
+        default:
+            return new FighterAI(rc, this, dataget);
         }
     }
 

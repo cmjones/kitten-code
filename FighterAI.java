@@ -13,24 +13,31 @@ import team197.modules.FightModule;
  * are encountered, switches to fighting mode.
  */
 public class FighterAI extends SoldierAI {
-	int channel_listen;
+    int channel_listen;
+
     public FighterAI(RobotController rc, int channel) {
         super(rc);
-        //nav.setDestination(rc, rc.senseEnemyHQLocation());
+        nav.setDestination(rc, rc.senseEnemyHQLocation());
         channel_listen = channel;
     }
 
-    public FighterAI(RobotController rc, SoldierAI oldme, int channel){
+    public FighterAI(RobotController rc, FighterAI oldme) {
     	super(rc, oldme);
-       // nav.setDestination(rc, rc.senseEnemyHQLocation());
-    	System.out.println(channel);
+        nav.setDestination(rc, rc.senseEnemyHQLocation());
+        channel_listen = oldme.channel_listen;
+    }
+
+    public FighterAI(RobotController rc, SoldierAI oldme, int channel) {
+    	super(rc, oldme);
+        nav.setDestination(rc, rc.senseEnemyHQLocation());
         channel_listen = channel;
     }
 
     public AI act(RobotController rc) throws Exception {
-        Direction d = Direction.NONE;
+        Direction d;
         MapLocation target;
-        if(channel_listen != 0 && waypoint_heard == null){
+
+/*        if(channel_listen != 0 && waypoint_heard == null){
         	// Loop until waypoints start appearing
         	while(waypoint_heard == null) {
         		hear_waypoints(rc, channel_listen);
@@ -45,28 +52,30 @@ public class FighterAI extends SoldierAI {
 	        	moveSafe(rc, d);
             	rc.yield();
         	} while (num_heard != waypoint_heard.length);
-        	
+
         	// Set destination one last time
         	//nav.setDestination(rc, waypoint_heard[waypoint_heard.length], waypoint_heard);
         	d = nav.moveSimple(rc);
         	moveSafe(rc, d);
         	rc.yield();
-        }
-        
-        // If we can't do anything, don't do anything
+        }*/
 
         // If there are enemies to fight, fight! Otherwise,
         // continue towards the enemy base
         if(rc.isActive()){
-        if(d != Direction.NONE && d != Direction.OMNI) {
-            // If there's a mine, defuse it
-            target = rc.getLocation().add(d);
-            if(rc.senseMine(target) != null && rc.senseMine(target) != rc.getTeam())
-                rc.defuseMine(target);
-            else
-                moveSafe(rc, d);
+            if((d = fight.fightClosestRobot(rc)) == Direction.OMNI)
+                d = nav.moveFlock(rc, 16);
+
+            if(d != Direction.NONE && d != Direction.OMNI) {
+                // If there's a mine, defuse it
+                target = rc.getLocation().add(d);
+                if(rc.senseMine(target) != null && rc.senseMine(target) != rc.getTeam())
+                    rc.defuseMine(target);
+                else
+                    moveSafe(rc, d);
+            }
         }
-        }
+
         // Keep the same ai for next round
         return this;
     }

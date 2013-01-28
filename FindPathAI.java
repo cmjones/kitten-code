@@ -6,6 +6,7 @@ import battlecode.common.Clock;
 import battlecode.common.Direction;
 
 import team197.modules.MapModule;
+import team197.modules.RadioModule;
 
 
 //IN PROGRESS: Reducing from 3D array to 2D array.
