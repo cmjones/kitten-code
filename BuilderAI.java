@@ -71,8 +71,8 @@ System.out.println("XXXXXXXXXXXXXXXXX  Heard all waypoints  XXXXXXXXXXXXXX");
                 // Sense if we have enough power to capture this square
                 if(rc.senseCaptureCost() < rc.getTeamPower()-10) {
                     // If we're low on energy, build a generator
-                    if(rc.getTeamPower() < 1.25*rc.senseCaptureCost())
-                        buildingtype = TOBUILD_GENERATOR;
+                    //if(rc.getTeamPower() < 1.25*rc.senseCaptureCost())
+                       // buildingtype = TOBUILD_GENERATOR;
 
                     switch(buildingtype){
                     case TOBUILD_GENERATOR:

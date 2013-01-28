@@ -48,8 +48,28 @@ public abstract class AI {
     }
 
     public void do_upkeep(RobotController rc){
-        if(Clock.getRoundNum()%15 == 0)
-            radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
+        if(Clock.getRoundNum()%15 == 0){
+            switch(rc.getType()) {
+            case ARTILLERY:
+            	 radio.write(rc, RadioModule.CHANNEL_ART_CHECK, radio.readTransient(rc, RadioModule.CHANNEL_ART_CHECK) + 1);
+            	break;
+            case MEDBAY:
+            	 radio.write(rc, RadioModule.CHANNEL_MED_CHECK, radio.readTransient(rc, RadioModule.CHANNEL_MED_CHECK) + 1);
+            	 break;
+            case GENERATOR:
+            	 radio.write(rc, RadioModule.CHANNEL_GEN_CHECK, radio.readTransient(rc, RadioModule.CHANNEL_GEN_CHECK) + 1);
+            	 break;
+            case SUPPLIER:
+            	 radio.write(rc, RadioModule.CHANNEL_SUP_CHECK, radio.readTransient(rc, RadioModule.CHANNEL_SUP_CHECK) + 1);
+            	 break;
+            case SHIELDS:
+            	 radio.write(rc, RadioModule.CHANNEL_SHI_CHECK, radio.readTransient(rc, RadioModule.CHANNEL_SHI_CHECK) + 1);
+            	 break;
+            case SOLDIER:
+                radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
+                break;
+            }
+        }
     }
 
     abstract public AI act(RobotController rc) throws Exception;
