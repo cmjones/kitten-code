@@ -311,10 +311,6 @@ count++;
 
             // If this square is an encampment, we should record it's location
             if((map_weights[cur.loc.x][cur.loc.y]&FLAG_ENCAMP) != 0) {
-                // Only record up to numClosest locations
-                if(encamp_i < numClosest)
-                    close[encamp_i++] = new MapLocation(cur.loc.x*searchScale+searchScale/2,
-                                                        cur.loc.y*searchScale+searchScale/2);
 
                 // If we're stopping, then 'cur' and 'lastEncampment' should
                 //  be rotationally symmetrical encampments.  These are the two
@@ -332,6 +328,11 @@ count++;
                         break;
                     }
                 } else {
+                    // Only record up to numClosest locations
+                    if(encamp_i < numClosest)
+                        close[encamp_i++] = new MapLocation(cur.loc.x*searchScale+searchScale/2,
+                                                            cur.loc.y*searchScale+searchScale/2);
+
                     // We only want to store encampments if they are closer
                     // to the enemy encampment.
                     dist = cur.loc.distanceSquaredTo(enemyHQ);
