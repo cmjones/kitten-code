@@ -5,6 +5,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.Robot;
 import battlecode.common.RobotController;
+import battlecode.common.Team;
 
 
 /** Module for moving towards a destination.
@@ -27,7 +28,6 @@ import battlecode.common.RobotController;
 public class NavModule {
     private static final double FLOCK_ALLY_WEIGHT = 16.0,
                                 FLOCK_HORIZ_SCALE = 2.5;
-    private static final int FLOCK_ALLY_RADIUS = 16;
     private MapLocation destination;
     private MapLocation[] waypoints,
                           path;
@@ -72,7 +72,7 @@ public class NavModule {
 
         destination = ml;
         this.waypoints = waypoints;
-        //System.out.println("******************" + ml);
+System.out.println("******************" + ml);
         // If the last waypoint is the destination, set it to null.
         if(waypoints[waypoints.length-1] != null &&
            waypoints[waypoints.length-1].equals(ml))
@@ -84,9 +84,9 @@ public class NavModule {
         // Search through the array and find the 'closest' waypoint.
         //  'closest' means the first waypoint for which the next
         //  waypoint is further away.
-        lastWaypoint = 0;
+        lastWaypoint = -1;
         lastDist = 1000000;
-//.out.println(" -- setDest: looking for the next waypoint");
+System.out.println(" -- setDest: looking for the next waypoint");
         for(curWaypoint = 0; curWaypoint < waypoints.length; curWaypoint++) {
             // Skip empty waypoints
             if(waypoints[curWaypoint] == null) continue;
@@ -103,13 +103,12 @@ public class NavModule {
             }
         }
 
-//System.out.println(" --          ended up with " + curWaypoint + " out of " + waypoints.length);
+System.out.println(" --          ended up with " + curWaypoint + " out of " + waypoints.length);
         // If we haven't found a valid waypoint, chuck the array
-        if(curWaypoint == waypoints.length) {
+        if(curWaypoint == waypoints.length)
             waypoints = null;
-//System.out.println(" --          waypoints should be null!");
-        }
-//System.out.println(" --          waypoints == null? " + (waypoints == null));
+
+System.out.println(" --          waypoints == null? " + (waypoints == null));
     }
 
     // Helper function to grab the current point to navigate to.  Also handles
@@ -119,7 +118,7 @@ public class NavModule {
     // Navigates to within 'distance' squared units away from each waypoint
     private MapLocation getDest(MapLocation cur, int distance) {
 //System.out.println(" -- waypoints == null at getDest? " + (waypoints == null));
-        if(waypoints != null && curWaypoint >= waypoints.length) {
+        if(waypoints != null && curWaypoint < waypoints.length) {
             // Check if we still need to navigate to the waypoint
 //System.out.println(" -- getDest: current waypoint = " + curWaypoint + " out of " + waypoints.length);
             if(cur.distanceSquaredTo(waypoints[curWaypoint]) > distance)
@@ -152,12 +151,26 @@ public class NavModule {
     // Helper function that finds a valid move direction, prioritizing
     //  the passed one.  Favors turning left, and returns Direction.NONE
     //  if no valid direction is found.
-    private Direction findMove(RobotController rc, Direction d) {
+    private Direction findMove(RobotController rc, MapLocation cur, Direction d) {
         Direction d1, d2;
+        Team t;
 
+        // First try the three directions forward and see
+        //  if there is one that doesn't have a mine
+        if(rc.canMove(d) && ((t = rc.senseMine(cur.add(d))) == null ||
+                             t == rc.getTeam()))
+            return d;
+        if(rc.canMove(d1 = d.rotateLeft()) && ((t = rc.senseMine(cur.add(d1))) == null ||
+                                               t == rc.getTeam()))
+            return d1;
+        if(rc.canMove(d2 = d.rotateRight()) && ((t = rc.senseMine(cur.add(d2))) == null ||
+                                                t == rc.getTeam()))
+            return d2;
+
+        // Now just find a place to move
         if(rc.canMove(d)) return d;
-        if(rc.canMove(d1 = d.rotateLeft())) return d1;
-        if(rc.canMove(d2 = d.rotateRight())) return d2;
+        if(rc.canMove(d1)) return d1;
+        if(rc.canMove(d2)) return d2;
         if(rc.canMove(d1 = d1.rotateLeft())) return d1;
         if(rc.canMove(d2 = d2.rotateRight())) return d2;
         if(rc.canMove(d1 = d1.rotateLeft())) return d1;
@@ -186,15 +199,15 @@ public class NavModule {
             return Direction.OMNI;
 
         // Check directions to move, prioritizing forward
-        return findMove(rc, cur.directionTo(target));
+        return findMove(rc, cur, cur.directionTo(target));
     }
 
     /** Navigates to the destination while keeping distance from allies.
      * Moves without navigating around mines towards the destination.
      *  Generally moves in the same direction as moveSimple, but is pushed
-     *  away from allies within a certain radius.
+     *  away from allies within the passed radius
      */
-    public Direction moveFlock(RobotController rc) throws GameActionException {
+    public Direction moveFlock(RobotController rc, int radius) throws GameActionException {
         MapLocation cur,
                     tmp,
                     target;
@@ -204,7 +217,7 @@ public class NavModule {
 
         // Grab the robot's current location and the current target
         cur = rc.getLocation();
-        target = getDest(cur, FLOCK_ALLY_RADIUS);
+        target = getDest(cur, radius);
 
         // Check to see if we've arrived yet
         if(target == null)
@@ -213,9 +226,9 @@ public class NavModule {
         // Grab a list of nearby allied robots.  If this array is blank,
         //  its fine!  The flock algorithm will just go straight to the
         //  destination.
-        allies = rc.senseNearbyGameObjects(Robot.class, FLOCK_ALLY_RADIUS, rc.getTeam());
+        allies = rc.senseNearbyGameObjects(Robot.class, radius, rc.getTeam());
 
-        // Record the direction towards the destination.
+        // Record the direction towards the destination
         dx = target.x-cur.x;
         dy = target.y-cur.y;
 
@@ -229,7 +242,7 @@ public class NavModule {
             d = cur.directionTo(tmp);
 
             // Weight smaller distances closer to FLOCK_ALLY_WEIGHT
-            mult = FLOCK_ALLY_WEIGHT*FLOCK_ALLY_RADIUS/(FLOCK_ALLY_RADIUS+cur.distanceSquaredTo(tmp));
+            mult = FLOCK_ALLY_WEIGHT*radius/(radius+cur.distanceSquaredTo(tmp));
             tx += -d.dx*mult;
             ty += -d.dy*mult;
         }
@@ -248,7 +261,7 @@ public class NavModule {
         //  direction, don't move.
         d = cur.directionTo(cur.add((int)dx, (int)dy));
         if(d != Direction.OMNI)
-            return findMove(rc, d);
+            return findMove(rc, cur, d);
         else
             return Direction.NONE;
     }
@@ -281,7 +294,7 @@ public class NavModule {
             if(path.length == 1) {
                 target = path[0];
                 path = null;
-                return findMove(rc, cur.directionTo(target));
+                return findMove(rc, cur, cur.directionTo(target));
             }
 
             // Otherwise, work through the path
@@ -307,6 +320,6 @@ System.out.println(" --- path point = " + curPathpoint + ", length = " + path.le
 
 System.out.println(" -- Moving towards point (" + target.x + ", " + target.y + ")");
         // Now navigate towards the current path point.
-        return findMove(rc, cur.directionTo(target));
+        return findMove(rc, cur, cur.directionTo(target));
     }
 }

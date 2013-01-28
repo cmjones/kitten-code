@@ -31,10 +31,9 @@ public class ArtilleryAI extends AI {
 
     public ArtilleryAI(RobotController rc) {
     	super(rc);
-        // Set the radius of locations to check to be slightly
-        // higher than the attack radius of Artillery.  This allows
-        // the unit to judge splash damage.
-        r = (int)Math.sqrt(RobotType.ARTILLERY.attackRadiusMaxSquared)+2;
+        // Set the radius of locations to check to be the
+        // attack radius of Artillery.
+        r = (int)Math.sqrt(RobotType.ARTILLERY.attackRadiusMaxSquared);
 
         // Now create the map, which is a 2d array of 2 int values:
         //  the amount of health the robot has at that location, and

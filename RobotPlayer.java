@@ -48,7 +48,12 @@ public class RobotPlayer {
                 ai = ai.act(rc);
             } catch(Exception e) {
                 // Wear the error hat!
-                rc.wearHat();
+                if(rc.getType() == RobotType.SOLDIER) {
+                    try {
+                        rc.wearHat();
+                    } catch(Exception e2) {}
+                }
+
                 e.printStackTrace();
             }
 

@@ -1,120 +1,122 @@
 package team197;
-import java.util.ArrayList;
-
 
 import battlecode.common.Clock;
-import battlecode.common.RobotController;
 import battlecode.common.Direction;
-import battlecode.common.MapLocation;
 import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 import battlecode.common.Team;
+import battlecode.common.Upgrade;
 
+import team197.modules.MapModule;
 import team197.modules.RadioModule;
 
 
-/** Example HQ ai, obtained from the example code.
- *  Just spawns new soldiers.
- */
 public class HQAI extends AI {
+    //Array of the 'breakpoints' regarding supplier production
+    //DEF: breakpoint: point at which a breakpost actually causes a change in rounds per robot
+    protected static int[] sup_breakpoints = {1,2,4,6,9,13,19,31};
+    protected static Direction[] alldir = {Direction.NORTH_WEST, Direction.NORTH, Direction.NORTH_EAST,
+                                           Direction.WEST,                        Direction.EAST,
+                                           Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST};
+
+    MapLocation[][] encamps_of_int;
+    int numencamps_int;
+    int msgbuf;
+    int dist_btwn_far;
+    int build_art_num;
+    int curbuild_art_num;
+    int close_encamps_num;
+    int build_sup_num;
+    boolean encamp_sup;
+    int curpoint_1 = 0;
+    int curpoint_2 = 0;
+    int totpoint_1;
+    int totpoint_2;
+    int sendmsg_2=0;
+    int sendmsg_1=0;
+    MapLocation desti;
+    MapLocation medbayloc;
+    MapLocation enemyhqloc;
+    int enemyhqdist;
+    MapLocation myhqloc;
+    int[] check_msgs = new int[1];
     protected int robotCount;
     private Direction enemyHQ;
-	int[][] internalmap;
-	int mapwidth;
-	int mapheight;
-	ArrayList<MapLocation> openset = new ArrayList<MapLocation>();
-	ArrayList<MapLocation> closedset = new ArrayList<MapLocation>();
-	ArrayList<MapLocation> havebeen = new ArrayList<MapLocation>();
-	int gscore;
-	int fscore;    
-	Direction[] directions = new Direction[3];
-	Direction[] alldir = new Direction[8];
-	MapLocation enemyhqloc;
-	MapLocation myhqloc;
-	boolean mapmade = false;
-	int[] check_msgs = new int[1];
-	
-	
-	
- public HQAI(RobotController rc) {
-	 super(rc);
+
+    public HQAI(RobotController rc) {
+        super(rc);
+
         robotCount = 0;
-        enemyHQ = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
-        alldir = Direction.values();
+        enemyhqloc = rc.senseEnemyHQLocation();
+        myhqloc = rc.getLocation();
+        enemyHQ = myhqloc.directionTo(enemyhqloc);
     }
 
     public HQAI(RobotController rc, HQAI oldme) {
         super(rc, oldme);
+
+        encamps_of_int = oldme.encamps_of_int;
+        numencamps_int = oldme.numencamps_int;
+        msgbuf = oldme.msgbuf;
+        dist_btwn_far = oldme.dist_btwn_far;
+        build_art_num = oldme.build_art_num;
+        curbuild_art_num = oldme.curbuild_art_num;
+        close_encamps_num = oldme.close_encamps_num;
+        build_sup_num = oldme.build_sup_num;
+        encamp_sup = oldme.encamp_sup;
+        curpoint_1 = oldme.curpoint_1;
+        curpoint_2 = oldme.curpoint_2;
+        totpoint_1 = oldme.totpoint_1;
+        totpoint_2 = oldme.totpoint_2;
+        sendmsg_2 = oldme.sendmsg_2;
+        sendmsg_1 = oldme.sendmsg_1;
+        desti = oldme.desti;
+        medbayloc = oldme.medbayloc;
         robotCount = oldme.robotCount;
         enemyHQ = oldme.enemyHQ;
-        internalmap = oldme.internalmap;
-        mapwidth = oldme.mapwidth;
-        mapheight = oldme.mapheight;
-	directions[0] = enemyHQ;
-	directions[1] = enemyHQ.rotateLeft();
-	directions[2] = enemyHQ.rotateRight(); 
-    enemyhqloc = rc.senseEnemyHQLocation();
-	myhqloc = rc.senseHQLocation();
-	for(int i = check_msgs.length - 1; --i >= 0;){
-		check_msgs[i] = 0;
-		alldir = Direction.values();
-	}
-	}
-    
-    public void makeInternalMap(RobotController rc){
-        mapwidth = rc.getMapWidth();
-        mapheight = rc.getMapHeight();
-        internalmap = new int [mapwidth][mapheight];
-        MapLocation[] badmineslocs = rc.senseNonAlliedMineLocations(new MapLocation(0,0),mapheight * mapheight + mapwidth * mapwidth);
-        for(int i = 0; i < badmineslocs.length; i++){
-        	internalmap[badmineslocs[i].x][badmineslocs[i].y] = 13;
-        }
-        
-        
-        MapLocation[] encamps = rc.senseAllEncampmentSquares();
-        for(int i = 0; i < encamps.length; i ++){
-        	internalmap[encamps[i].x][encamps[i].y] = 2;
+        alldir = oldme.alldir;
+        enemyhqloc = oldme.enemyhqloc;
+        myhqloc = oldme.myhqloc;
+        alldir = oldme.alldir;
+    }
+
+    public void start(RobotController rc) {
+        // Make a robot, then recalculate encampments.  The
+        //  calculation should take about as long as required
+        //  to spawn another robot.
+        try {
+            enemyhqdist = myhqloc.distanceSquaredTo(enemyhqloc);
+System.out.println("Distance between hqs: " + enemyhqdist);
+            findEncampments(rc);
+        } catch(Exception e) {
+            System.out.println("Exception during start:\n" + e);
         }
     }
 
-    public void do_upkeep(RobotController rc) {
-         if(Clock.getRoundNum()%15 == 1){
-            robotCount = radio.read(rc, RadioModule.CHANNEL_CHECKIN);
-            	for(int i = check_msgs.length - 1; i >= 0; i --){
-	        	 if(check_msgs[i] != 1){
-	        		 if(((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP) == 1 || ((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP))&0x7F) != 0 ))){
-	        			 check_msgs[i] = 1;
-	        			 System.out.println("Heeey!");
-	        		 } else {
-	        			 radio.write(rc, RadioModule.CHANNEL_PATH_ENCAMP, check_msgs[i]);
-	        			 System.out.println("No one has replied.");
-	        		 }
-	        	 }
-	         }
-         }
-    }
-
-    public AI act(RobotController rc) throws Exception {
-    	makeInternalMap(rc);
-        return new Begin1HQAI(rc, this);
-    }
-    
-    public void makeRobot(RobotController rc, int data, int job) throws GameActionException{
+    public boolean makeRobot(RobotController rc, int data, int job) throws GameActionException{
         Team mineTeam;
 
-    	int msgbuf = (data << 4) + job;
-        radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
-        System.out.println("HQ sent a build message");
+        // Only make a robot if there's enough power to do so
+        if(rc.getTeamPower() < 10)
+            return false;
+
         Direction dir = enemyHQ;
         do{
-        	if(rc.canMove(dir) &&
-                   ((mineTeam = rc.senseMine(rc.getLocation().add(dir))) == null ||
-                    mineTeam == rc.getTeam())){
-        		rc.spawn(dir);
-        		break;
-        	}
+            if(rc.canMove(dir) &&
+               ((mineTeam = rc.senseMine(rc.getLocation().add(dir))) == null ||
+                mineTeam == rc.getTeam())){
+                    int msgbuf = (data << 4) + job;
+                    radio.write(rc, RadioModule.CHANNEL_GETJOB, msgbuf);
+                    System.out.println("HQ sent a build message");
+                    rc.spawn(dir);
+                    return true;
+            }
         } while((dir = dir.rotateLeft()) != enemyHQ);
+
+        // Failed to find an open spot
+        return false;
     }
-    
 
     public void requestPath(RobotController rc, MapLocation desti){
     	int buf = desti.x << 14;
@@ -122,91 +124,211 @@ public class HQAI extends AI {
     	radio.write(rc, RadioModule.CHANNEL_PATH_ENCAMP, buf);
     	check_msgs[0] = buf;
     }
-    
-    
-    
-    
-    
-    
-    public void make_path(RobotController rc){
-		openset.add(myhqloc);
-		int x = myhqloc.x;
-		int y = myhqloc.y;
-		gscore = internalmap[x][y];
-		fscore = gscore + get_H(rc,myhqloc);
-		MapLocation current;
-		ArrayList<MapLocation> neighbors = new ArrayList<MapLocation>();
-		int tentative_g;
-		
-		while(true){
-			current = getlowestf_inopen(rc,fscore);
-			x = current.x;
-			y = current.y;
-			havebeen.add(current);
-                if(current.equals(enemyhqloc)){
-				System.out.println("Finished!");
-				return;
-			} else {
-				openset.remove(current);
-				closedset.add(current);
-				neighbors = get_neighbors(rc, current);
-				
-				int size = neighbors.size();
-				for(int i = -1; ++i < size;){
-					MapLocation neighbor = neighbors.get(i);
-					tentative_g = gscore + internalmap[x][y];
-					
-                                        if(!closedset.contains(neighbor) ||
-                                           tentative_g <= internalmap[x][y]){
-						gscore = tentative_g;
-						fscore = internalmap[x][y]
-                                                   + get_H(rc,neighbor);
-						if(!openset.contains(neighbor)){
-							openset.add(neighbor);
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	public MapLocation getlowestf_inopen(RobotController rc, int curf){
-		int lowest_f = Integer.MAX_VALUE;
-		MapLocation lowestf_loc = null;
-		int size = openset.size();
-		for(int i = -1; ++i < size;){
-			MapLocation loc = openset.get(i);
-			if( internalmap[loc.x][loc.y] + get_H(rc,loc) + curf < lowest_f){
-				lowest_f = internalmap[loc.x][loc.y] + get_H(rc,loc) + curf;
-				lowestf_loc = loc;
-			}
-		}
-		return lowestf_loc;
+
+    public void do_upkeep(RobotController rc) {
+        if(Clock.getRoundNum()%15 == 1){
+            robotCount = radio.read(rc, RadioModule.CHANNEL_CHECKIN);
+            for(int i = check_msgs.length - 1; i >= 0; i --){
+                 if(check_msgs[i] != 1){
+                     if(((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP) == 1 || ((radio.read(rc,RadioModule.CHANNEL_PATH_ENCAMP))&0x7F) != 0 ))){
+                         check_msgs[i] = 1;
+                         System.out.println("Heeey!");
+                     } else {
+                         radio.write(rc, RadioModule.CHANNEL_PATH_ENCAMP, check_msgs[i]);
+                         System.out.println("No one has replied.");
+                     }
+                 }
+             }
          }
-    public int get_H(RobotController rc, MapLocation loc){
-        return loc.distanceSquaredTo(enemyhqloc);
     }
-	
-	public ArrayList<MapLocation> get_neighbors(RobotController rc, MapLocation central){
-		ArrayList<MapLocation> temp = new ArrayList<MapLocation>();
-		for(int i = directions.length; --i > 0;){
-                    MapLocation temploc = central.add(directions[i]);
-	 	    if(temploc.y >= 0 &&
-                         temploc.y < mapheight && temploc.x >= 0 && temploc.x < mapwidth){
-		 	    temp.add(temploc);
-		    }
+
+
+
+    public void do_broadcast(RobotController rc){
+        if(sendmsg_2 == 1){
+            if(curpoint_2 < totpoint_2){
+System.out.println(" ===== HQ Broadcasting to 2: " + encamps_of_int[2][curpoint_2] + "  - " + curpoint_2 + "/" + totpoint_2);
+                broadcast_waypoints(rc, encamps_of_int[2][curpoint_2], curpoint_2, totpoint_2, radio.CHANNEL_WAYPOINTS_2);
+                curpoint_2++;
+            } else {
+                sendmsg_2 = 0;
+            }
+        }
+
+        if(sendmsg_1 == 1){
+            if(curpoint_1 < totpoint_1){
+System.out.println(" ===== HQ Broadcasting to 1: " + encamps_of_int[1][curpoint_1] + "  - " + curpoint_1 + "/" + totpoint_1);
+                broadcast_waypoints(rc, encamps_of_int[1][curpoint_1], curpoint_1, totpoint_1, radio.CHANNEL_WAYPOINTS_1);
+                curpoint_1++;
+            } else {
+/*                for(int i = 0; i < totpoint_1; i ++){
+                        System.out.println(encamps_of_int[1][i]);
+                }*/
+                sendmsg_1 = 0;
+            }
+        }
+    }
+
+    public MapLocation findencamp_nearpoint(RobotController rc, MapLocation center, int rsquare, boolean includeCenter) throws GameActionException {
+        MapLocation[] encamps;
+        MapLocation best_encamp;
+        int best_dist,
+            dist;
+
+        // Grab a list of nearby encampments
+        encamps = rc.senseEncampmentSquares(center, rsquare, null);
+
+        // Now walk through and find the closest encamp to the center
+        best_dist = rsquare*2;
+        best_encamp = null;
+        for(int i = 0; i < encamps.length; i++) {
+            dist = encamps[i].distanceSquaredTo(center);
+
+            if(dist == 0) {
+                // If 'includeCenter' is true, it's fine to return the center
+                if(includeCenter)
+                    return center;
+            } else if(dist < best_dist) {
+                // This is the best location so far, store it
+                best_dist = dist;
+                best_encamp = encamps[i];
+            }
+        }
+
+        // Return the encampment found, could be null
+        return best_encamp;
+    }
+
+    private void findEncampments(RobotController rc) throws GameActionException {
+        // Find nearby encampments, making scouts in the mean-time
+        makeRobot(rc, msgbuf, AI.JOB_SCOUT);
+        while((encamps_of_int = map.findEncampments(rc, 20, 3)) == null) {
+            makeRobot(rc, msgbuf, AI.JOB_SCOUT);
+        }
+
+        encamps_of_int[1][encamps_of_int[1].length - 1] = findencamp_nearpoint(rc, encamps_of_int[1][encamps_of_int[1].length - 1], 2, true);
+        encamps_of_int[2][encamps_of_int[2].length - 1] = findencamp_nearpoint(rc, encamps_of_int[2][encamps_of_int[2].length - 1], 2, true);
+
+        while(encamps_of_int == null || encamps_of_int[1] == null){
+            rc.yield();
+        }
+
+        medbayloc = findencamp_nearpoint(rc, encamps_of_int[1][encamps_of_int[1].length - 1], 9, false);
+
+        // Ensure there aren't more waypoints than can be broadcast
+        totpoint_1 = encamps_of_int[1].length;
+        if(totpoint_1 > 31) {
+            encamps_of_int[1][30] = encamps_of_int[2][totpoint_1-1];
+            totpoint_1 = 31;
+        }
+
+        totpoint_2 = encamps_of_int[2].length;
+        if(totpoint_2 > 31) {
+            encamps_of_int[2][30] = encamps_of_int[2][totpoint_2-1];
+            totpoint_2 = 31;
+        }
+
+        //Checks to see how far away the two far encamps are from eachother.
+        //Depending on whether they're far or close, it builds one or two artillery--
+        // close = 1, far = 2.
+        int dist_btwn_far = encamps_of_int[1][totpoint_1-1].distanceSquaredTo(encamps_of_int[2][totpoint_2-1]);
+        if(dist_btwn_far > 14){
+            build_art_num = 2;
+        } else {
+            build_art_num = 1;
+        }
+
+        // Calculate exactly where encampments are for close-by ones
+        MapLocation[] actualClose = new MapLocation[encamps_of_int[0].length*9];
+        MapLocation[] temp;
+        numencamps_int = 0;
+        for(int i = encamps_of_int[0].length-1; i >= 0; i--) {
+            // If this center is near the hq, don't build anything there.
+            //  This is so we don't get trapped.
+            if(encamps_of_int[0][i].distanceSquaredTo(myhqloc) <= 6)
+                continue;
+
+            temp = rc.senseEncampmentSquares(encamps_of_int[0][i], 2, null);
+            for(int j = 0; j < temp.length; j++) {
+                // Store away the actual encampment
+                actualClose[numencamps_int++] = temp[j];
+            }
+        }
+
+        // Now store the actual encampments in the array
+        encamps_of_int[0] = actualClose;
+
+        //checks to see how many close encamps it saw and divides by three and checks to see
+        //what's the closest breakpoint, and then saves that number to build that many suppliers
+        close_encamps_num = numencamps_int;
+        build_sup_num = 0;
+        for(int i = 0; i < sup_breakpoints.length; i ++){
+            if(close_encamps_num < sup_breakpoints[i])
+                break;
+
+            build_sup_num = sup_breakpoints[i];
+        }
+
+        encamp_sup = true;
+    }
+
+
+
+    public AI act(RobotController rc) throws Exception {
+        if(encamps_of_int == null) {
+            // Perform the starting routine
+            start(rc);
+
+            // If the closest encampments are far away, change to
+            //  a rush strategy
+System.out.println("Closest encampment is " + myhqloc.distanceSquaredTo(encamps_of_int[0][numencamps_int-1]));
+            if(enemyhqdist <= myhqloc.distanceSquaredTo(encamps_of_int[0][numencamps_int-1]))
+                return new PanicHQAI(rc, this);
+        }
+
+        // Broadcast anything necessary
+    	do_broadcast(rc);
+
+        // to keep the HQ from going OMG OMG OMG KEE PDOING THINGS AHAAAHAHAHHHHHHH
+    	if(rc.isActive()){
+            //Checks to see whether it's been told to build 1 or 2 artilleries. If it was told to
+            // build one, goes to the first one and builds.
+            //Else, it sends one to the farther one first and then sends one to the closer one.
+            //System.out.println(build_art_num);
+            if(build_art_num == 1){
+                msgbuf = 127 << 13;
+                msgbuf += radio.CHANNEL_WAYPOINTS_1 << 6;
+                msgbuf += AI.TOBUILD_ARTILLERY;
+                build_art_num -= 1;
+                sendmsg_1 = 1;
+                makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+            } else if(build_art_num == 2){
+                msgbuf = 127 << 13;
+                msgbuf += radio.CHANNEL_WAYPOINTS_2 << 6;
+                msgbuf += AI.TOBUILD_ARTILLERY;
+                build_art_num -= 1;
+                sendmsg_2 = 1;
+                makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+            } else if(build_sup_num != 0){
+                desti = findencamp_nearpoint(rc, encamps_of_int[0][build_sup_num - 1], 2, true);
+                if(desti != null){
+                    msgbuf = desti.x << 13;
+                    msgbuf += desti.y << 6;
+                    msgbuf += AI.TOBUILD_SUPPLIER;
+                    makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+                    build_sup_num -= 1;
                 }
-		return temp;
-	}
-	
-	public MapLocation findencamp_nearpoint(RobotController rc, MapLocation center){
-		alldir = Direction.values();
-		for(int i = 0; i < alldir.length; i ++){
-			if(rc.senseEncampmentSquare(center.add(alldir[i])) == true){
-				return center.add(alldir[i]);
-			}
-		}
-		return null;
-	}
-	
+            } else if(medbayloc != null){
+                msgbuf = medbayloc.x << 13;
+                msgbuf += medbayloc.y << 6;
+                msgbuf += AI.TOBUILD_MEDBAY;
+                makeRobot(rc,msgbuf, AI.JOB_BUILDER);
+                medbayloc = null;
+            } else {
+                return new SwarmHQAI(rc, this);
+            }
+    	}
+
+    	return this;
+    }
 }

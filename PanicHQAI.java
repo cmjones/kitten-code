@@ -13,20 +13,27 @@ import team197.modules.RadioModule;
 import team197.modules.MapModule;
 
 
-public class SwarmHQAI extends HQAI {
+public class PanicHQAI extends HQAI {
     int msgbuf;
 
-    public SwarmHQAI(RobotController rc) {
+    public PanicHQAI(RobotController rc) {
         super(rc);
 
         msgbuf = 0;
     }
 
-    public SwarmHQAI(RobotController rc, HQAI oldme) {
+    public PanicHQAI(RobotController rc, PanicHQAI oldme) {
         super(rc, oldme);
 
         msgbuf = oldme.msgbuf;
     }
+
+    public PanicHQAI(RobotController rc, HQAI oldme) {
+        super(rc, oldme);
+
+        msgbuf = 0;
+    }
+
 
     public AI act(RobotController rc) throws GameActionException{
         if(check_msgs[0] == 0){
@@ -34,10 +41,8 @@ public class SwarmHQAI extends HQAI {
         }
 
         if(rc.isActive()){
-//            if(check_msgs[0] == 1){
-                msgbuf = RadioModule.CHANNEL_PATH_ENCAMP;
-                makeRobot(rc, msgbuf, AI.JOB_STANDARD);
-//            }
+            // Spam Fighters
+            makeRobot(rc, msgbuf, AI.JOB_PANIC);
         }
 
         return this;

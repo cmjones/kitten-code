@@ -11,79 +11,69 @@ import team197.modules.NavModule;
 import team197.modules.FightModule;
 
 public class BuilderAI extends SoldierAI {
-	int buildermessage;
-	int xdesti;
-	int ydesti;
-	int buildingtype;
-	MapLocation target;
-	int channel_listen = 0;
-	boolean hear_return;
-	public BuilderAI(RobotController rc, SoldierAI oldme, int navdata){
-		super(rc, oldme);
-		buildermessage = navdata;
-		if(buildermessage >>> 13 != 127){
-			xdesti = buildermessage >>> 13;
-			ydesti = (buildermessage >>> 6)&0x7F;
-			//System.out.println(xdesti + " " + ydesti);
-			buildingtype = buildermessage&0x3F;
-			target = new MapLocation(xdesti, ydesti);
-			nav.setDestination(rc,target);
-		} else {
-			System.out.println(channel_listen);
-			channel_listen = (buildermessage >>> 6)&0x3F;
-			buildingtype = buildermessage&0x3F;
-		}
-	}
+    int buildermessage;
+    int xdesti;
+    int ydesti;
+    int buildingtype;
+    MapLocation target;
+    int channel_listen = 0;
+    boolean hear_return;
+    public BuilderAI(RobotController rc, SoldierAI oldme, int navdata){
+            super(rc, oldme);
+            buildermessage = navdata;
+            if(buildermessage >>> 13 != 127){
+                    xdesti = buildermessage >>> 13;
+                    ydesti = (buildermessage >>> 6)&0x7F;
+                    //System.out.println(xdesti + " " + ydesti);
+                    buildingtype = buildermessage&0x3F;
+                    target = new MapLocation(xdesti, ydesti);
+                    nav.setDestination(rc,target);
+            } else {
+                    System.out.println(channel_listen);
+                    channel_listen = (buildermessage >>> 6)&0x3F;
+                    buildingtype = buildermessage&0x3F;
+            }
+    }
 
-	public AI act(RobotController rc) throws Exception {
-            Direction d;
+    public AI act(RobotController rc) throws Exception {
+        Direction d;
 
-            // If we can't do anything, don't do anything
-            if(channel_listen != 0 && waypoint_heard == null){
-                // Loop until waypoints start appearing
-                while(waypoint_heard == null) {
-                    hear_waypoints(rc, channel_listen);
-                    rc.yield();
-                }
-                // Loop to fill the waypoints array
-                do {
-                    hear_waypoints(rc, channel_listen);
-                    System.out.println("new desti set, num_heard = " + num_heard + " out of " + waypoint_heard.length);
-                    nav.setDestination(rc, waypoint_heard[num_heard - 1], waypoint_heard);
-                    if(rc.isActive()) moveSafe(rc, nav.moveAStar(rc, map));
-                    rc.yield();
-                } while (num_heard != waypoint_heard.length);
-
-                // Set destination one last time
-                //nav.setDestination(rc, waypoint_heard[waypoint_heard.length], waypoint_heard);
-                if(rc.isActive()) moveSafe(rc, nav.moveAStar(rc, map));
+        // If we can't do anything, don't do anything
+        if(channel_listen != 0 && waypoint_heard == null){
+            // Loop to hear waypoints from the HQ
+            while(hear_waypoints(rc, channel_listen))
                 rc.yield();
-            }
 
-//        if((waypoint_heard == null || num_heard != waypoint_heard.length)){
-//        	//hear_waypoints(rc, channel_listen);
-//        	hear_return = hear_waypoints(rc, channel_listen);
-//        	//System.out.println("meh");
-//        }
-//        if(hear_return && waypoint_heard != null){
-//        	System.out.println("new destination set");
-//        	nav.setDestination(rc, waypoint_heard[waypoint_heard.length-1], waypoint_heard);
-//        }
+System.out.println("XXXXXXXXXXXXXXXXX  Heard all waypoints  XXXXXXXXXXXXXX");
+            // Set the destination with the heard waypoints
+            nav.setDestination(rc, waypoint_heard[waypoint_heard.length-1], waypoint_heard);
+            if(rc.isActive()) moveSafe(rc, nav.moveAStar(rc, map));
+            rc.yield();
+        }
 
 
-            if(sendconfo == 1 && Clock.getRoundNum() % 15 == 0){
-                    radio.write(rc, channel_listen, 1);
-            }
-            if(rc.isActive()) {
-                // If we're following waypoints, use the A* movement. Otherwise,
-                //  just move directly
-                if(waypoint_heard != null)
-                    d = nav.moveAStar(rc, map);
-                else
-                    d = nav.moveSimple(rc);
+        // Send confirmation if all the waypoints have been heard
+        if(sendconfo == 1 && Clock.getRoundNum() % 15 == 0){
+                radio.write(rc, channel_listen, 1);
+        }
 
-                // Check to see if we've found our destination encampment
-                if(d == Direction.OMNI && rc.senseEncampmentSquare(rc.getLocation()) == true){
+        // Now act
+        if(rc.isActive()) {
+            // If we're following waypoints, use the A* movement. Otherwise,
+            //  just move directly
+            if(waypoint_heard != null)
+                d = nav.moveAStar(rc, map);
+            else
+                d = nav.moveSimple(rc);
+
+            // Check to see if we've found our destination encampment
+            if(d == Direction.OMNI && rc.senseEncampmentSquare(rc.getLocation()) == true){
+                // Sense if we have enough power to capture this square
+                if(rc.senseCaptureCost() < rc.getTeamPower()-10) {
+                    // If we're low on energy, build a generator
+                    if(rc.getTeamPower() < 1.25*rc.senseCaptureCost())
+                        buildingtype = TOBUILD_GENERATOR;
+
                     switch(buildingtype){
                     case TOBUILD_GENERATOR:
                         rc.captureEncampment(RobotType.GENERATOR);
@@ -101,10 +91,11 @@ public class BuilderAI extends SoldierAI {
                         rc.captureEncampment(RobotType.SUPPLIER);
                         break;
                     }
-                } else {
-                    moveSafe(rc, d);
                 }
+            } else {
+                moveSafe(rc, d);
             }
-            return this;
-	}
+        }
+        return this;
+    }
 }
