@@ -44,7 +44,7 @@ public class RobotPlayer {
         // Start acting
         while (ai != null) {
             try {
-                ai.do_upkeep(rc);
+                ai = ai.do_upkeep(rc);
                 ai = ai.act(rc);
             } catch(Exception e) {
                 // Wear the error hat!

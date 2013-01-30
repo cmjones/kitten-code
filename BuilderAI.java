@@ -11,6 +11,8 @@ import team197.modules.NavModule;
 import team197.modules.FightModule;
 
 public class BuilderAI extends SoldierAI {
+    private static final int MAX_ROUNDS = 5;
+
     int buildermessage;
     int xdesti;
     int ydesti;
@@ -18,6 +20,9 @@ public class BuilderAI extends SoldierAI {
     MapLocation target;
     int channel_listen = 0;
     boolean hear_return;
+    int bestdist;
+    int roundsTrying;
+
     public BuilderAI(RobotController rc, SoldierAI oldme, int navdata){
             super(rc, oldme);
             buildermessage = navdata;
@@ -27,6 +32,7 @@ public class BuilderAI extends SoldierAI {
                     //System.out.println(xdesti + " " + ydesti);
                     buildingtype = buildermessage&0x3F;
                     target = new MapLocation(xdesti, ydesti);
+                    bestdist = target.distanceSquaredTo(rc.getLocation());
                     nav.setDestination(rc,target);
             } else {
                     System.out.println(channel_listen);
@@ -37,6 +43,7 @@ public class BuilderAI extends SoldierAI {
 
     public AI act(RobotController rc) throws Exception {
         Direction d;
+        int dist;
 
         // If we can't do anything, don't do anything
         if(channel_listen != 0 && waypoint_heard == null){
@@ -47,6 +54,15 @@ public class BuilderAI extends SoldierAI {
 System.out.println("XXXXXXXXXXXXXXXXX  Heard all waypoints  XXXXXXXXXXXXXX");
             // Set the destination with the heard waypoints
             nav.setDestination(rc, waypoint_heard[waypoint_heard.length-1], waypoint_heard);
+
+            // Step backwards through the waypoints to find the destination
+            bestdist = 10000;
+            for(int i = waypoint_heard.length-1; i >= 0; i--) {
+                if(waypoint_heard[i] != null) {
+                    target = waypoint_heard[i];
+                    break;
+                }
+            }
             if(rc.isActive()) moveSafe(rc, nav.moveAStar(rc, map));
             rc.yield();
         }
@@ -59,6 +75,22 @@ System.out.println("XXXXXXXXXXXXXXXXX  Heard all waypoints  XXXXXXXXXXXXXX");
 
         // Now act
         if(rc.isActive()) {
+            // Check current distance away from the destination.
+            //  If we aren't getting closer for a number of rounds,
+            //  give up and become a fighter.
+            if(target != null) {
+                dist = target.distanceSquaredTo(rc.getLocation());
+                if(dist < bestdist) {
+                    bestdist = dist;
+                    roundsTrying = 0;
+                } else if(roundsTrying >= MAX_ROUNDS) {
+                    return new FighterAI(rc, this, 0);
+                } else {
+                    roundsTrying++;
+                }
+            }
+
+
             // If we're following waypoints, use the A* movement. Otherwise,
             //  just move directly
             if(waypoint_heard != null)

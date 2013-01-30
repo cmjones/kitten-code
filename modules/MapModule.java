@@ -18,12 +18,12 @@ public class MapModule {
                                                                    Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST};
 
     private int[][] map_weights;
-    private int mapwidth,
-                mapheight,
-                gscore,
+    private int gscore,
                 fscore;
     private boolean mirrorx,
                     mirrory;
+    public int mapwidth,
+               mapheight;
 
     // FindEncampments variables
     PathNode[][] map_nodes;

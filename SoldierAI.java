@@ -1,9 +1,12 @@
 package team197;
 
 import battlecode.common.Direction;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotType;
 import battlecode.common.Team;
+import battlecode.common.Upgrade;
 
 import team197.modules.RadioModule;
 import team197.modules.NavModule;
@@ -51,6 +54,7 @@ public class SoldierAI extends AI {
             return new PanicSoldierAI(rc, this);
         case JOB_SCOUT:
             return new ScoutAI(rc, this);
+        case JOB_FIGHTER:
         default:
             return new FighterAI(rc, this, dataget);
         }
@@ -64,18 +68,33 @@ public class SoldierAI extends AI {
      * Assumes that the robot is currently free to act.
      */
     public void moveSafe(RobotController rc, Direction d) throws Exception {
-        MapLocation target;
+        MapLocation[] mines;
+        MapLocation target, cur;
         Team t;
+        int vision;
 
         if(d == Direction.NONE || d == Direction.OMNI)
             return;
 
-        // If there's a mine, defuse it
-        target = rc.getLocation().add(d);
-        t = rc.senseMine(target);
-        if(t != null && t != rc.getTeam())
-            rc.defuseMine(target);
-        else
-            rc.move(d);
+        // Figure out our sight radius
+        vision = RobotType.SOLDIER.sensorRadiusSquared;
+        if(rc.hasUpgrade(Upgrade.VISION))
+            vision += GameConstants.VISION_UPGRADE_BONUS;
+
+        // If we have defusion, first attempt to defuse any
+        //  visible enemy mines.  Don't do so if we have shields.
+        cur = rc.getLocation();
+        if(rc.getShields() == 0 &&
+           rc.hasUpgrade(Upgrade.DEFUSION) &&
+           (mines = rc.senseMineLocations(cur, vision, rc.getTeam().opponent())).length != 0) {
+            rc.defuseMine(mines[0]);
+        } else {
+            target = cur.add(d);
+            t = rc.senseMine(target);
+            if(t != null && t != rc.getTeam())
+                rc.defuseMine(target);
+            else
+                rc.move(d);
+        }
     }
 }

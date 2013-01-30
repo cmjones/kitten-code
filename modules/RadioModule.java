@@ -18,8 +18,8 @@ import battlecode.common.RobotController;
  */
 public class RadioModule {
     public static final int CHANNEL_FREE01 = 0,
-                            CHANNEL_FREE02 = 1,
-                            CHANNEL_FREE03 = 2,
+                            CHANNEL_CHARGE = 1,
+                            CHANNEL_PANIC = 2,
                             CHANNEL_SUP_CHECK = 3,
                             CHANNEL_SHI_CHECK = 4,
                             CHANNEL_MED_CHECK = 5,

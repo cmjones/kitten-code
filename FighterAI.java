@@ -5,8 +5,9 @@ import battlecode.common.MapLocation;
 import battlecode.common.Robot;
 import battlecode.common.RobotController;
 
-import team197.modules.NavModule;
 import team197.modules.FightModule;
+import team197.modules.NavModule;
+import team197.modules.RadioModule;
 
 
 /** Simple rusher using the fight code.
@@ -16,19 +17,19 @@ import team197.modules.FightModule;
  *  waves.
  */
 public class FighterAI extends SoldierAI {
-    private static final int WAIT_DIST = 25,
-                             WAIT_NUM = 10;
+    private static final int WAIT_DIST = 30,
+                             WAIT_NUM = 16,
+                             WAIT_ROUNDS = 120;
 
     MapLocation wait_point,
                 kill_point;
-    int channel_listen;
+    private int roundsWaiting;
     boolean wait;
 
-    public FighterAI(RobotController rc, int channel) {
+    public FighterAI(RobotController rc, int data) {
         super(rc);
-        setTargetPoints(rc);
+        setTargetPoints(rc, data);
         nav.setDestination(rc, wait_point);
-        channel_listen = channel;
         wait = true;
     }
 
@@ -38,28 +39,32 @@ public class FighterAI extends SoldierAI {
         kill_point = oldme.kill_point;
         wait = oldme.wait;
         nav.setDestination(rc, wait_point);
-        channel_listen = oldme.channel_listen;
     }
 
-    public FighterAI(RobotController rc, SoldierAI oldme, int channel) {
+    public FighterAI(RobotController rc, SoldierAI oldme, int data) {
     	super(rc, oldme);
-        setTargetPoints(rc);
+        setTargetPoints(rc, data);
         nav.setDestination(rc, wait_point);
-        channel_listen = channel;
         wait = true;
     }
 
-    private void setTargetPoints(RobotController rc) {
+    private void setTargetPoints(RobotController rc, int data) {
         MapLocation tmp;
+        int x, y, num;
 
         tmp = rc.senseHQLocation();
 
         // Set the kill point to be the enemy.
         kill_point = rc.senseEnemyHQLocation();
 
-        // Set the wait point to be half-way
-        //  between the hqs.
-        wait_point = new MapLocation((tmp.x+kill_point.x)/2, (tmp.y+kill_point.y)/2);
+        // If either coordinate is 0, set the wait point to be the center
+        //  of the map.  Otherwise, use the passed wait point.
+        x = (data >>> 13);
+        y = (data >>> 6)&0x7F;
+        if(x == 0 || y == 0)
+            wait_point = new MapLocation((tmp.x+kill_point.x)/2, (tmp.y+kill_point.y)/2);
+        else
+            wait_point = new MapLocation(data >>> 13, (data >>> 6)&0x7F);
     }
 
     public AI act(RobotController rc) throws Exception {
@@ -90,31 +95,54 @@ public class FighterAI extends SoldierAI {
         	rc.yield();
         }*/
 
+        // If we wait too long, just move forward
+        if(wait) {
+            roundsWaiting++;
+            if(roundsWaiting >= WAIT_ROUNDS) {
+                wait = false;
+                nav.setDestination(rc, kill_point);
+                radio.write(rc, RadioModule.CHANNEL_CHARGE, 0xCADCAD);
+            }
+        }
+
         // If there are enemies to fight, fight! Otherwise,
         // continue towards the current destination
         if(rc.isActive()){
             // Get our location
             cur = rc.getLocation();
 
-            if((d = fight.fightClosestRobot(rc)) == Direction.OMNI)
-                d = nav.moveFlock(rc, wait?4:16);
-
-            if(d != Direction.NONE && d != Direction.OMNI) {
-                // If there's a mine, defuse it
-                target = cur.add(d);
-                if(rc.senseMine(target) != null && rc.senseMine(target) != rc.getTeam())
-                    rc.defuseMine(target);
-                else
-                    moveSafe(rc, d);
-            }
-
             // If we're within range of the wait point and there are
             //  a number of allies around us, move to the kill point
-            if(wait && cur.distanceSquaredTo(wait_point) <= WAIT_DIST &&
-               rc.senseNearbyGameObjects(Robot.class, wait_point, WAIT_DIST, rc.getTeam()).length >= WAIT_NUM) {
-                wait = false;
-                nav.setDestination(rc, kill_point);
+            if(wait && cur.distanceSquaredTo(wait_point) <= WAIT_DIST) {
+                // Check the radio to see if we should charge
+                if(radio.read(rc, RadioModule.CHANNEL_CHARGE) == 0xCADCAD ||
+                   rc.senseNearbyGameObjects(Robot.class, wait_point, WAIT_DIST, rc.getTeam()).length >= WAIT_NUM) {
+                    wait = false;
+                    nav.setDestination(rc, kill_point);
+                } else if(rc.senseMine(cur) == null) {
+                    if((d = fight.fightClosestRobot(rc)) == Direction.OMNI) {
+                        // Lay some mines while we're waiting
+                        rc.layMine();
+                        return this;
+                    }
+
+                    // Only move if we stay within the wait radius
+                    if(wait_point.distanceSquaredTo(cur.add(d)) <= WAIT_DIST)
+                        moveSafe(rc, d);
+                    return this;
+                }
             }
+
+            // Move or fight
+            if((d = fight.fightClosestRobot(rc)) == Direction.OMNI) {
+                if(wait) {
+                    d = nav.moveSimple(rc);
+                } else {
+                    d = nav.moveFlock(rc, 5);
+                }
+            }
+
+            moveSafe(rc, d);
         }
 
         // Keep the same ai for next round

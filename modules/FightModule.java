@@ -30,16 +30,17 @@ public class FightModule {
     private static final double STRAFE_ADJ_COST = 25;
     private static final double STRAFE_ALLY_BASE = 36;
     private static final double STRAFE_ENEMY_BASE = 36;
+    private static final int ATTACK_DIST = RobotType.SOLDIER.sensorRadiusSquared;
     private static final int IDLE_THRESH = 3;
 
     private MapLocation cur;
-    private boolean wait;
+    private int wait;
 
 
     /** Creates a new FightModule
      */
     public FightModule() {
-        wait = true;
+        wait = 3;
     }
 
 
@@ -68,8 +69,7 @@ public class FightModule {
                 if(m.isAdjacentTo(targets[j])) break;
             if(j == targets.length) continue;
 
-            // Test if the new location is located
-            //  on a mine
+            // Test if the new location is located on a mine
             if(rc.senseMine(m) != rc.getTeam() && rc.senseMine(m) != null)
                 continue;
 
@@ -193,12 +193,27 @@ public class FightModule {
         MapLocation tmp;
         Direction[] dirs;
         Robot[] robots;
+        int cx, cy;
 
         // Store current location
         cur = rc.getLocation();
 
+        // Get a list of nearby allies
+        robots = rc.senseNearbyGameObjects(Robot.class, ATTACK_DIST*2, rc.getRobot().getTeam());
+        allies = new MapLocation[robots.length];
+        cx = cy = 0;
+        for(int i = 0; i < allies.length; i++) {
+            allies[i] = rc.senseLocationOf(robots[i]);
+            cx += allies[i].x;
+            cy += allies[i].y;
+        }
+        if(allies.length == 0)
+            tmp = cur;
+        else
+            tmp = new MapLocation(cx/allies.length, cy/allies.length);
+
         // Get a list of nearby enemies
-        robots = rc.senseNearbyGameObjects(Robot.class, 33, rc.getRobot().getTeam().opponent());
+        robots = rc.senseNearbyGameObjects(Robot.class, tmp, ATTACK_DIST*3, rc.getRobot().getTeam().opponent());
 
         // If there are no enemies, there is nothing to fight
         if(robots.length == 0) return Direction.OMNI;
@@ -232,11 +247,11 @@ public class FightModule {
             if(rc.canMove(d)) {
                 if(rc.senseRobotInfo(robots[mini]).type != RobotType.SOLDIER ||
                    (Math.abs(cur.x-tmp.x) > 2 && Math.abs(cur.y-tmp.y) > 2) ||
-                   !wait) {
-                    wait = true;
+                   wait == 0) {
+                    wait = 3;
                     return d;
                 } else {
-                    wait = false;
+                    wait--;
                 }
             }
             return Direction.NONE;
@@ -245,11 +260,6 @@ public class FightModule {
             return dirs[0];
         } else {
             // Get a list of nearby allies
-            robots = rc.senseNearbyGameObjects(Robot.class, 33, rc.getRobot().getTeam());
-            allies = new MapLocation[robots.length];
-            for(int i = 0; i < allies.length; i++)
-                allies[i] = rc.senseLocationOf(robots[i]);
-
             // Now return the best direction to move
             return strafe(rc, dirs, enemies, allies);
         }

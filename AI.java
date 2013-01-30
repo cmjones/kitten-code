@@ -25,7 +25,8 @@ public abstract class AI {
                             JOB_MINESWEEPER_R = 4,
                             JOB_PANIC = 5,
                             JOB_SCOUT = 6,
-                            JOB_BUILDER = 7;
+                            JOB_BUILDER = 7,
+                            JOB_FIGHTER = 8;
 
     public static final int TOBUILD_GENERATOR = 1,
                             TOBUILD_ARTILLERY = 2,
@@ -47,7 +48,7 @@ public abstract class AI {
         num_heard = 0;
     }
 
-    public void do_upkeep(RobotController rc){
+    public AI do_upkeep(RobotController rc){
         if(Clock.getRoundNum()%15 == 0){
             switch(rc.getType()) {
             case ARTILLERY:
@@ -67,9 +68,15 @@ public abstract class AI {
             	 break;
             case SOLDIER:
                 radio.write(rc, RadioModule.CHANNEL_CHECKIN, radio.readTransient(rc, RadioModule.CHANNEL_CHECKIN) + 1);
+
+                // Check the panic channel.  If we're panicking, become a PanicSoldier
+                if(radio.read(rc, RadioModule.CHANNEL_PANIC) != 0 && !(this instanceof PanicSoldierAI))
+                    return new PanicSoldierAI(rc, (SoldierAI)this);
                 break;
             }
         }
+
+        return this;
     }
 
     abstract public AI act(RobotController rc) throws Exception;
