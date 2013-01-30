@@ -327,7 +327,8 @@ System.out.println(" ===== HQ Broadcasting to 1: " + encamps_of_int[1][curpoint_
 
     public AI act(RobotController rc) throws Exception {
         Robot[] enemies;
-
+        if(true){
+        return new MineFieldHQAI(rc, this);}
         if(encamps_of_int == null) {
             // Perform the starting routine
             start(rc);
@@ -338,6 +339,7 @@ System.out.println("Closest encampment is " + myhqloc.distanceSquaredTo(encamps_
             if(enemyhqdist <= myhqloc.distanceSquaredTo(encamps_of_int[0][0]))
                 return new PanicHQAI(rc, this, shieldloc);
         }
+
 
         // Broadcast anything necessary
     	do_broadcast(rc);

@@ -26,7 +26,8 @@ public abstract class AI {
                             JOB_PANIC = 5,
                             JOB_SCOUT = 6,
                             JOB_BUILDER = 7,
-                            JOB_FIGHTER = 8;
+                            JOB_FIGHTER = 8,
+                            JOB_DEFENDER = 9;
 
     public static final int TOBUILD_GENERATOR = 1,
                             TOBUILD_ARTILLERY = 2,

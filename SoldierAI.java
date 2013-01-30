@@ -54,6 +54,8 @@ public class SoldierAI extends AI {
             return new PanicSoldierAI(rc, this);
         case JOB_SCOUT:
             return new ScoutAI(rc, this);
+        case JOB_DEFENDER:
+        	return new DefenderAI(rc, this, dataget);
         case JOB_FIGHTER:
         default:
             return new FighterAI(rc, this, dataget);
