@@ -1,7 +1,10 @@
 package team197;
 
 import battlecode.common.Clock;
+import battlecode.common.GameActionException;
+import battlecode.common.Robot;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.MapLocation;
 import team197.modules.MapModule;
 
@@ -49,7 +52,17 @@ public abstract class AI {
         num_heard = 0;
     }
 
-    public AI do_upkeep(RobotController rc){
+    public AI do_upkeep(RobotController rc) throws GameActionException {
+        // Check the enemy hq.  If we can sense it, and the hq helth is low,
+        //  signal that we probably won.
+        MapLocation tmp = rc.senseEnemyHQLocation();
+        if(rc.canSenseSquare(tmp)) {
+            Robot r = (Robot)rc.senseObjectAtLocation(tmp);
+            RobotInfo info = rc.senseRobotInfo(r);
+            if(info.energon < 10)
+                rc.setTeamMemory(0, 0xCADCADL);
+        }
+
         if(Clock.getRoundNum()%15 == 0){
             switch(rc.getType()) {
             case ARTILLERY:

@@ -18,8 +18,8 @@ import team197.modules.RadioModule;
  */
 public class FighterAI extends SoldierAI {
     private static final int WAIT_DIST = 30,
-                             WAIT_NUM = 16,
-                             WAIT_ROUNDS = 120;
+                             WAIT_NUM = 20,
+                             WAIT_ROUNDS = 150;
 
     MapLocation wait_point,
                 kill_point;
@@ -138,7 +138,7 @@ public class FighterAI extends SoldierAI {
                 if(wait) {
                     d = nav.moveSimple(rc);
                 } else {
-                    d = nav.moveFlock(rc, 5);
+                    d = nav.moveFlock(rc, 3);
                 }
             }
 

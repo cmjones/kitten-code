@@ -15,13 +15,24 @@ public class RobotPlayer {
      * If not, decide on an ai based on simple statistics about the game.
      */
     public static AI chooseAI(RobotController rc) {
+        long mem;
+
         switch(rc.getType()) {
         case ARTILLERY:
             return new ArtilleryAI(rc);
         case GENERATOR:
             return new GeneratorAI(rc);
         case HQ:
-            return new HQAI(rc);
+            // If we lost the last round, use a defensive ai.
+            //  In either case, set our dead-man's switch
+            mem = rc.getTeamMemory()[0];
+            if(mem == 0xFFFFFFFFL) {
+                rc.setTeamMemory(0, 0xFFFFFFFFL);
+                return new MineFieldHQAI(rc);
+            } else {
+                rc.setTeamMemory(0, 0xFFFFFFFFL);
+                return new HQAI(rc);
+            }
         case MEDBAY:
             return new MedbayAI(rc);
         case SHIELDS:

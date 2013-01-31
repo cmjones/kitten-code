@@ -21,20 +21,25 @@ public class MineFieldHQAI extends HQAI {
 	
 	public MineFieldHQAI(RobotController rc) {
 		super(rc);
+                start(rc);
 	}
 	
 	public MineFieldHQAI(RobotController rc, HQAI oldme) {
 		super(rc, oldme);
-        enemyhqloc = rc.senseEnemyHQLocation();
-        myhqloc = rc.getLocation();
-		allencamps = rc.senseAllEncampmentSquares();
-		curencamp = 0;
-		closestencamp = -1;
-		num_defenders = 10;
-		docount = true;
-		maxencamp = 10;
+                start(rc);
 	}
 	
+    public void start(RobotController rc) {
+        enemyhqloc = rc.senseEnemyHQLocation();
+        myhqloc = rc.getLocation();
+        allencamps = rc.senseAllEncampmentSquares();
+        curencamp = 0;
+        closestencamp = -1;
+        num_defenders = 12;
+        docount = true;
+        maxencamp = 10;
+    }
+
 	public int findClosestEncamp(){
 		int closest = Integer.MAX_VALUE;
 		int temp = 0;
@@ -60,25 +65,25 @@ public class MineFieldHQAI extends HQAI {
 			   }
 			   encampsnear = rc.senseEncampmentSquares(myhqloc, 4 * radius, null);
 		   }
-		   
-		   if(encampsnear.length != 0 && curencamp != encampsnear.length && rc.isActive() && curencamp < maxencamp){
-			  
-			   desti = encampsnear[curencamp];
-			   if(!desti.equals(myhqloc.add(Direction.NORTH_EAST)) && !desti.equals(myhqloc.add(Direction.NORTH_WEST)) && !desti.equals(myhqloc.add(Direction.SOUTH_EAST)) && !desti.equals(myhqloc.add(Direction.SOUTH_WEST))){
-	           	msgbuf = desti.x << 13;
-	           	msgbuf += desti.y << 6;
-	           	msgbuf += AI.TOBUILD_ARTILLERY;
-			   makeRobot(rc, msgbuf, AI.JOB_BUILDER);
-			   }
-			   curencamp ++;
-		   } else if(robotCount - artCount < num_defenders && rc.isActive()){
-			   //System.out.println(robotCount);
-			   makeRobot(rc, radius, AI.JOB_DEFENDER);
-		   } else if (rc.isActive()) {
-			   rc.researchUpgrade(Upgrade.NUKE);
-		   }
-		   
-		   
-		   return this;
+
+            if(rc.isActive()) {
+               if(encampsnear.length != 0 && curencamp != encampsnear.length && rc.isActive() && curencamp < maxencamp){
+                   desti = encampsnear[curencamp];
+                   if(!desti.equals(myhqloc.add(Direction.NORTH_EAST)) && !desti.equals(myhqloc.add(Direction.NORTH_WEST)) && !desti.equals(myhqloc.add(Direction.SOUTH_EAST)) && !desti.equals(myhqloc.add(Direction.SOUTH_WEST))){
+                        msgbuf = desti.x << 13;
+                        msgbuf += desti.y << 6;
+                        msgbuf += AI.TOBUILD_ARTILLERY;
+                        makeRobot(rc, msgbuf, AI.JOB_BUILDER);
+                   }
+                   curencamp ++;
+               } else if(robotCount < rc.checkResearchProgress(Upgrade.NUKE)/8 && robotCount < num_defenders) {
+                       //System.out.println(robotCount);
+                       makeRobot(rc, radius, AI.JOB_DEFENDER);
+               } else {
+                       rc.researchUpgrade(Upgrade.NUKE);
+               }
+            }
+
+            return this;
 	}
 }

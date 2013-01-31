@@ -58,7 +58,7 @@ public class PanicSoldierAI extends SoldierAI {
                     rc.layMine();
                     return this;
                 } else {
-                    d = nav.moveFlock(rc, 8);
+                    d = nav.moveFlock(rc, 2);
                 }
             }
 
